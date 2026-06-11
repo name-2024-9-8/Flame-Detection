@@ -1,0 +1,36 @@
+<?php
+/**
+ * 数据库配置模板（示例文件，不含真实凭据）
+ * 部署时复制为 database.php 并填写实际值
+ *
+ * @author    王永林
+ * @studentId 12303070414
+ * @created   2026-06-11
+ * @task      人员B — 阶段1 数据库配置
+ */
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+$active_group = 'default';
+$query_builder = TRUE;
+
+$db['default'] = array(
+    'dsn'      => '',
+    'hostname' => 'localhost',
+    'username' => 'your_username',
+    'password' => 'your_password',
+    'database' => 'flame_detection',
+    'dbdriver' => 'mysqli',
+    'dbprefix' => '',
+    'pconnect' => FALSE,
+    'db_debug' => (ENVIRONMENT !== 'production'),
+    'cache_on' => FALSE,
+    'cachedir' => '',
+    'char_set' => 'utf8mb4',
+    'dbcollat' => 'utf8mb4_unicode_ci',
+    'swap_pre' => '',
+    'encrypt'  => FALSE,
+    'compress' => FALSE,
+    'stricton' => FALSE,
+    'failover' => array(),
+    'save_queries' => TRUE
+);
