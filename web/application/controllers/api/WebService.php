@@ -31,11 +31,12 @@ class WebService extends REST_Controller {
      * 失败重传标记：响应含 error_code 字段
      */
     public function alarm() {
+        $this->rate_limit('ws_alarm:' . $this->input->ip_address(), 30, 60);
+
         $raw  = file_get_contents('php://input');
         $body = json_decode($raw, true);
-        if (!$body) $body = $_POST;
+        if (!$body) $body = $this->input->post();
 
-        // 标准化字段提取
         $unit_code = isset($body['UnitCode']) ? $body['UnitCode'] : null;
         $verify_id = isset($body['VerifyID']) ? $body['VerifyID'] : null;
         $data = isset($body['data']) ? $body['data'] : $body;
@@ -44,11 +45,23 @@ class WebService extends REST_Controller {
             $this->error('缺少 UnitCode（单位编码）');
         }
 
-        // TODO: 根据 UnitCode + VerifyID 验证调用方身份
-        // $this->_verify_caller($unit_code, $verify_id);
+        // 调用方身份校验（数据库注册单位查询）
+        $this->_verify_caller($unit_code, $verify_id);
 
-        if (empty($data['device_id']) && empty($data['lng'])) {
-            $this->error('缺少必要字段（device_id 或 lng）', $this->http_bad_request);
+        if (empty($data['device_id'])) {
+            $this->error('缺少 device_id', $this->http_bad_request);
+        }
+
+        // 设备 MAC 校验
+        if (empty($data['device_mac'])) {
+            $this->error('缺少 device_mac', $this->http_forbidden);
+        }
+        $device = $this->db->get_where('T_Device', array(
+            'Id' => $data['device_id'],
+            'MAC' => $data['device_mac']
+        ))->row();
+        if (!$device) {
+            $this->error('设备验证失败', $this->http_forbidden);
         }
 
         try {
@@ -73,9 +86,11 @@ class WebService extends REST_Controller {
     // ─────────────────────────────────
 
     public function device($id = 0) {
-        // 外部系统查询，可选择性鉴权
         $unit_code = $this->input->get('unit_code', true);
-        if (!$unit_code) {
+        if ($unit_code) {
+            // 外部系统：验证 unit_code 注册状态
+            $this->_verify_caller($unit_code, null);
+        } else {
             $this->require_auth();
         }
 
@@ -93,7 +108,9 @@ class WebService extends REST_Controller {
 
     public function video_frame($event_id = 0) {
         $unit_code = $this->input->get('unit_code', true);
-        if (!$unit_code) {
+        if ($unit_code) {
+            $this->_verify_caller($unit_code, null);
+        } else {
             $this->require_auth();
         }
 
@@ -152,10 +169,12 @@ class WebService extends REST_Controller {
     // ─────────────────────────────────
 
     private function _verify_caller($unit_code, $verify_id) {
-        // TODO: 查询已注册的外部系统单位表验证身份
-        $allowed_units = array('SMART_CITY_001', 'VIDEO_MONITOR_001', 'ATMOS_MONITOR_001');
-        if (!in_array($unit_code, $allowed_units)) {
-            $this->error('未注册的单位编码', $this->http_forbidden);
+        // 查询数据字典中注册的外部系统单位
+        $registered = $this->db
+            ->get_where('T_Dictionary', array('Key' => 'UnitCode', 'Value' => $unit_code))
+            ->row();
+        if (!$registered && !in_array($unit_code, array('SMART_CITY_001', 'VIDEO_MONITOR_001', 'ATMOS_MONITOR_001'))) {
+            $this->error('未注册的单位编码：' . $unit_code, $this->http_forbidden);
         }
         return true;
     }

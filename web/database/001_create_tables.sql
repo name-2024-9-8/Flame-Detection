@@ -284,8 +284,8 @@ CREATE TABLE T_AccessLog (
 INSERT INTO T_Role (Name, Description) VALUES ('超级管理员', '系统最高权限');
 INSERT INTO T_Role (Name, Description) VALUES ('普通用户',   '查看和处理报警事件');
 
--- 初始化数据：默认管理员（密码 123456，后续需要改为加密存储）
-INSERT INTO T_User (Account, Name, Password) VALUES ('admin', '管理员', '123456');
+-- 初始化数据：默认管理员（密码 123456，bcrypt 哈希加密）
+INSERT INTO T_User (Account, Name, Password) VALUES ('admin', '管理员', '$2y$10$7QnEoGsR8POwiIekEtlIIu/ZGCatuhYt8p1yfFGjMq8nfu34Szikm');
 INSERT INTO T_UserRole (UserId, RoleId) VALUES (1, 1);
 
 -- 初始化数据：系统默认配置

@@ -57,21 +57,21 @@ class Export extends REST_Controller {
             $col++;
         }
 
-        // 数据行
+        // 数据行（单引号前缀防止公式注入）
         $row = 2;
         $status_map = array('1'=>'报警', '2'=>'待审核', '3'=>'已审核');
         foreach ($result['list'] as $item) {
-            $sheet->setCellValueByColumnAndRow(0, $row, $item['Id']);
-            $sheet->setCellValueByColumnAndRow(1, $row, $item['EventType'] == 'fire' ? '火焰' : '烟雾');
-            $sheet->setCellValueByColumnAndRow(2, $row, round($item['Confidence'] * 100, 1) . '%');
-            $sheet->setCellValueByColumnAndRow(3, $row, $item['Longitude'] . ',' . $item['Latitude']);
-            $sheet->setCellValueByColumnAndRow(4, $row, $item['Location']);
-            $sheet->setCellValueByColumnAndRow(5, $row, $item['CreatTime']);
-            $sheet->setCellValueByColumnAndRow(6, $row, $item['CameraName']);
-            $sheet->setCellValueByColumnAndRow(7, $row, $item['DeviceAddress']);
-            $sheet->setCellValueByColumnAndRow(8, $row, isset($status_map[$item['Status']]) ? $status_map[$item['Status']] : $item['Status']);
-            $sheet->setCellValueByColumnAndRow(9, $row, $item['UrgencyDegree']);
-            $sheet->setCellValueByColumnAndRow(10, $row, $item['OperateResult']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(0, $row), $item['Id']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(1, $row), $item['EventType'] == 'fire' ? '火焰' : '烟雾');
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(2, $row), round($item['Confidence'] * 100, 1) . '%');
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(3, $row), $item['Longitude'] . ',' . $item['Latitude']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(4, $row), $item['Location']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(5, $row), $item['CreatTime']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(6, $row), $item['CameraName']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(7, $row), $item['DeviceAddress']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(8, $row), isset($status_map[$item['Status']]) ? $status_map[$item['Status']] : $item['Status']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(9, $row), $item['UrgencyDegree']);
+            $sheet->setCellValueExplicit($sheet->getCellByColumnAndRow(10, $row), $item['OperateResult']);
             $row++;
         }
 

@@ -28,21 +28,19 @@
 -- ALTER INSTANCE ADD MEMBER 'slave_node_ip:3306';
 -- SELECT * FROM performance_schema.replication_group_members;
 
--- ── 4. 定时事件：每7天清理90天前的已审核报警 ──
-DELIMITER $$
-CREATE EVENT IF NOT EXISTS evt_clean_old_alarms
+-- ── 4. 启动事件调度器 + 定时清理90天前已审核报警 ──
+SET GLOBAL event_scheduler = ON;
+
+DROP EVENT IF EXISTS evt_clean_old_alarms;
+CREATE EVENT evt_clean_old_alarms
 ON SCHEDULE EVERY 7 DAY
 DO
-BEGIN
-    -- 仅清理已审核且超过90天的报警（软删除标记）
     UPDATE T_DetectResult
     SET Remark = CONCAT(IFNULL(Remark,''), ' [ARCHIVED ', NOW(), ']'),
         IsRead = 1
     WHERE Status = '3'
       AND CreatTime < DATE_SUB(NOW(), INTERVAL 90 DAY)
       AND Remark NOT LIKE '%ARCHIVED%';
-END$$
-DELIMITER ;
 
 -- ── 5. 索引优化（面向海量事件数据的快速筛选）──
 ALTER TABLE T_DetectResult ADD INDEX idx_area_status_time (AreaId, Status, CreatTime);

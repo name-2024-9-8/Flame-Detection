@@ -70,9 +70,9 @@ class Email_lib {
         );
         $this->CI->email->initialize($config);
 
-        $type      = isset($data['event_type']) ? $data['event_type'] : '未知';
+        $type      = htmlspecialchars(isset($data['event_type']) ? $data['event_type'] : '未知', ENT_QUOTES, 'UTF-8');
         $conf      = isset($data['confidence']) ? round($data['confidence'] * 100, 1) . '%' : 'N/A';
-        $location  = isset($data['location']) ? $data['location'] : '未知位置';
+        $location  = htmlspecialchars(isset($data['location']) ? $data['location'] : '未知位置', ENT_QUOTES, 'UTF-8');
         $time      = date('Y-m-d H:i:s');
 
         $subject = "[火情预警] {$type} 报警 — {$location}";
