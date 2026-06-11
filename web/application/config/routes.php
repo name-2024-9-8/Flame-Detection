@@ -63,17 +63,24 @@ $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
 // ── RESTful API 路由 ──
+// Auth 认证
 $route['api/auth/login']   = 'api/Auth/login';
 $route['api/auth/profile'] = 'api/Auth/profile';
 $route['api/auth/refresh'] = 'api/Auth/refresh';
 $route['api/auth/logout']  = 'api/Auth/logout';
 
-$route['api/alarm/events']        = 'api/Alarm/index';
-$route['api/alarm/events/create'] = 'api/Alarm/create';
-$route['api/alarm/events/(:num)'] = 'api/Alarm/detail/$1';
-$route['api/alarm/events/(:num)/update'] = 'api/Alarm/update/$1';
+// 报警事件
+$route['api/alarm/events']                  = 'api/Alarm/index';
+$route['api/alarm/events/create']           = 'api/Alarm/create';
+$route['api/alarm/events/(:num)']           = 'api/Alarm/detail/$1';
+$route['api/alarm/events/(:num)/update']    = 'api/Alarm/update/$1';
 
-$route['api/devices']        = 'api/Device/index';
-$route['api/devices/create'] = 'api/Device/create';
+// 设备管理
+$route['api/devices']                       = 'api/Device/index';
+$route['api/devices/create']                = 'api/Device/create';
+$route['api/devices/(:num)/update']         = 'api/Device/update/$1';
+$route['api/devices/(:num)/delete']         = 'api/Device/delete/$1';
 
-$route['api/statistics'] = 'api/Statistics/index';
+// 统计分析
+$route['api/statistics']                    = 'api/Statistics/index';
+$route['api/statistics/health']             = 'api/Statistics/health';
