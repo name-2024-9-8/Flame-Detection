@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}AI智能云盒管理 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>.page-container{padding:20px;background:#f5f6fa;min-height:calc(100vh - 100px)}.card-custom{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}.table th{background:#f8f9fa;font-size:13px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #e74c3c}.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}.status-dot.online{background:#27ae60}.status-dot.offline{background:#95a5a6}.status-dot.fault{background:#e74c3c}</style>{% endblock %}
+{% block content %}
+<div class="page-container"><div class="container-fluid"><div class="card-custom">
+<div class="toolbar"><h4 class="fw-bold m-0"><i class="bi bi-cpu me-2"></i>AI智能云盒管理</h4><button class="btn btn-danger btn-sm" onclick="showModal('add')"><i class="bi bi-plus-lg me-1"></i>新增云盒</button></div>
+<div class="row mb-3"><div class="col-md-3"><input class="form-control form-control-sm" placeholder="搜索设备名称/编码/IP" id="fKeyword"></div><div class="col-md-2"><select class="form-select form-select-sm" id="fStatus"><option value="">全部状态</option><option value="1">在线</option><option value="2">离线</option><option value="3">故障</option><option value="4">维护中</option></select></div><div class="col-md-2"><button class="btn btn-outline-secondary btn-sm" onclick="loadCloudBoxes()"><i class="bi bi-search"></i> 筛选</button></div></div>
+<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>ID</th><th>设备编码</th><th>名称</th><th>型号</th><th>IP地址</th><th>CPU</th><th>内存</th><th>NPU温度</th><th>摄像头数</th><th>状态</th><th>最后心跳</th><th>操作</th></tr></thead><tbody id="cbTableBody"></tbody></table></div>
+<div class="d-flex justify-content-between mt-3"><small class="text-muted" id="cbPageInfo"></small><div class="btn-group btn-group-sm" id="cbPagination"></div></div>
+</div></div></div>
+
+<div class="modal fade" id="cbModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-danger text-white"><h6 class="modal-title"><i class="bi bi-cpu me-1"></i><span id="modalTitle">新增AI云盒</span></h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="cbId">
+<div class="row g-3">
+<div class="col-md-6"><label class="form-label">设备编码 <span class="text-danger">*</span></label><input class="form-control" id="cbCode"></div>
+<div class="col-md-6"><label class="form-label">设备名称 <span class="text-danger">*</span></label><input class="form-control" id="cbName"></div>
+<div class="col-md-6"><label class="form-label">设备型号</label><input class="form-control" id="cbModel" value="RK3399 Pro D"></div>
+<div class="col-md-6"><label class="form-label">固件版本</label><input class="form-control" id="cbFirmware"></div>
+<div class="col-md-4"><label class="form-label">IP地址</label><input class="form-control" id="cbIp"></div>
+<div class="col-md-4"><label class="form-label">MAC地址</label><input class="form-control" id="cbMac"></div>
+<div class="col-md-4"><label class="form-label">状态</label><select class="form-select" id="cbStatus"><option value="1">在线</option><option value="2">离线</option><option value="3">故障</option><option value="4">维护中</option></select></div>
+<div class="col-md-6"><label class="form-label">部署位置</label><input class="form-control" id="cbLocation"></div>
+<div class="col-md-3"><label class="form-label">经度</label><input type="number" step="any" class="form-control" id="cbLng"></div>
+<div class="col-md-3"><label class="form-label">纬度</label><input type="number" step="any" class="form-control" id="cbLat"></div>
+<div class="col-12"><label class="form-label">备注</label><textarea class="form-control" id="cbRemark" rows="2"></textarea></div>
+</div></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-danger" onclick="saveCloudBox()">保存</button></div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let editMode='add',cbPage=1;
+$(function(){loadCloudBoxes();});
+function loadCloudBoxes(page=1){cbPage=page;let params={page,per_page:15,keyword:$('#fKeyword').val(),status:$('#fStatus').val()};Object.keys(params).forEach(k=>{if(!params[k])delete params[k]});$.get('/api/v1/cloudboxes',params,function(res){if(res.code===200){let rows=res.data.items.map(c=>`<tr><td>${c.id}</td><td><code>${c.device_code}</code></td><td><strong>${c.device_name}</strong></td><td>${c.device_model}</td><td>${c.ip_address||'-'}</td><td>${c.cpu_usage||0}%</td><td>${c.memory_usage||0}%</td><td>${c.npu_temperature||'-'}°C</td><td>${c.camera_count}</td><td><span class="status-dot ${c.status===1?'online':c.status===3?'fault':'offline'}"></span>${c.status_name}</td><td>${c.last_heartbeat||'-'}</td><td><button class="btn btn-info btn-sm text-white me-1" onclick="editCB(${c.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-danger btn-sm" onclick="deleteCB(${c.id},'${c.device_name}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');$('#cbTableBody').html(rows||'<tr><td colspan="12" class="text-center py-4 text-muted">暂无数据</td></tr>');$('#cbPageInfo').text(`共 ${res.data.total} 条`);let ph='';for(let i=1;i<=res.data.pages;i++)ph+=`<button class="btn btn-${i===res.data.page?'danger':'outline-secondary'}" onclick="loadCloudBoxes(${i})">${i}</button>`;$('#cbPagination').html(ph);}});}
+function showModal(mode){editMode=mode;$('#modalTitle').text(mode==='add'?'新增AI云盒':'修改AI云盒');$('#cbId').val('');$('#cbCode').val('');$('#cbName').val('');$('#cbModel').val('RK3399 Pro D');$('#cbFirmware').val('');$('#cbIp').val('');$('#cbMac').val('');$('#cbStatus').val(1);$('#cbLocation').val('');$('#cbLng').val('');$('#cbLat').val('');$('#cbRemark').val('');$('#cbModal').modal('show');}
+function editCB(id){$.get('/api/v1/cloudboxes?page=1&per_page=200',function(res){let c=res.data.items.find(i=>i.id===id);if(!c)return alert('设备不存在');editMode='edit';$('#modalTitle').text('修改AI云盒');$('#cbId').val(c.id);$('#cbCode').val(c.device_code);$('#cbName').val(c.device_name);$('#cbModel').val(c.device_model);$('#cbFirmware').val(c.firmware_version||'');$('#cbIp').val(c.ip_address||'');$('#cbMac').val(c.mac_address||'');$('#cbStatus').val(c.status);$('#cbLocation').val(c.location||'');$('#cbLng').val(c.longitude||'');$('#cbLat').val(c.latitude||'');$('#cbRemark').val(c.remark||'');$('#cbModal').modal('show');});}
+function saveCloudBox(){let data={device_code:$('#cbCode').val(),device_name:$('#cbName').val(),device_model:$('#cbModel').val(),firmware_version:$('#cbFirmware').val(),ip_address:$('#cbIp').val(),mac_address:$('#cbMac').val(),status:parseInt($('#cbStatus').val()),location:$('#cbLocation').val(),longitude:parseFloat($('#cbLng').val())||null,latitude:parseFloat($('#cbLat').val())||null,remark:$('#cbRemark').val()};if(!data.device_code||!data.device_name)return alert('请填写必要字段');let url=editMode==='add'?'/api/v1/cloudboxes':'/api/v1/cloudboxes/'+$('#cbId').val(),method=editMode==='add'?'POST':'PUT';$.ajax({url,method,contentType:'application/json',data:JSON.stringify(data),success(r){alert(r.msg);$('#cbModal').modal('hide');loadCloudBoxes(cbPage);},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});}
+function deleteCB(id,name){if(!confirm('确定删除云盒「'+name+'」吗？'))return;$.ajax({url:'/api/v1/cloudboxes/'+id,method:'DELETE',success(r){alert(r.msg);loadCloudBoxes(cbPage);},error(xhr){alert(xhr.responseJSON?.msg||'删除失败');}});}
+</script>
+{% endblock %}

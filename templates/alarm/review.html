@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}事件处理审核 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>.page-container{padding:20px;background:#f5f6fa;min-height:calc(100vh - 100px)}.card-custom{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.table th{background:#f8f9fa;font-size:13px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #e74c3c}</style>{% endblock %}
+{% block content %}
+<div class="page-container"><div class="container-fluid"><div class="card-custom">
+<h4 class="fw-bold mb-3"><i class="bi bi-check-circle me-2"></i>事件处理审核</h4>
+<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>ID</th><th>事件编号</th><th>类型</th><th>级别</th><th>置信度</th><th>位置</th><th>检测时间</th><th>状态</th><th>操作</th></tr></thead>
+<tbody>{% for e in events %}<tr><td>{{ e.id }}</td><td><code>{{ e.event_code }}</code></td><td><span class="badge {{ 'bg-danger' if e.event_type==1 else 'bg-warning' if e.event_type==2 else 'bg-info' }}">{{ e.event_type_name }}</span></td><td><span class="badge {{ 'bg-danger' if e.alarm_level==1 else 'bg-warning text-dark' if e.alarm_level==2 else 'bg-info' }}">{{ e.alarm_level_name }}</span></td><td>{{ '%.1f%%'|format(e.detection_confidence*100) if e.detection_confidence else '-' }}</td><td>{{ e.location_description or '-' }}</td><td>{{ e.detected_at|datetime_format }}</td><td><span class="badge bg-{{ 'danger' if e.process_status==1 else 'info' if e.process_status==2 else 'success' }}">{{ e.process_status_name }}</span></td><td><button class="btn btn-success btn-sm me-1" onclick="processEvent({{ e.id }},'approve')"><i class="bi bi-check-lg"></i> 通过</button><button class="btn btn-danger btn-sm" onclick="processEvent({{ e.id }},'reject')"><i class="bi bi-x-lg"></i> 驳回</button></td></tr>{% else %}<tr><td colspan="9" class="text-center py-4 text-muted">暂无待审核事件</td></tr>{% endfor %}</tbody></table></div>
+</div></div></div>
+
+<div class="modal fade" id="processModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h6 class="modal-title"><span id="processTitle">审核操作</span></h6><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="processEventId"><input type="hidden" id="processAction"><div class="mb-3"><label class="form-label">处理备注</label><textarea class="form-control" id="processRemark" rows="3" placeholder="请输入处理备注..."></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-danger" onclick="confirmProcess()">确认提交</button></div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function processEvent(id,action){$('#processEventId').val(id);$('#processAction').val(action);$('#processTitle').text(action==='approve'?'审核通过':'审核驳回');$('#processRemark').val('');$('#processModal').modal('show');}
+function confirmProcess(){let id=$('#processEventId').val(),action=$('#processAction').val(),remark=$('#processRemark').val();$.ajax({url:'/api/v1/alarm-events/'+id+'/process',method:'PUT',contentType:'application/json',data:JSON.stringify({action,remark}),success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});}
+</script>
+{% endblock %}

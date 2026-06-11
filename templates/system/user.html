@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}用户管理 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>.page-container{padding:20px;background:#f5f6fa;min-height:calc(100vh - 100px)}.card-custom{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}.filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.filter-row select,.filter-row input{width:auto;min-width:120px}.table th{background:#f8f9fa;font-size:13px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #e74c3c}</style>{% endblock %}
+{% block content %}
+<div class="page-container"><div class="container-fluid"><div class="card-custom">
+<div class="toolbar"><h4 class="fw-bold m-0"><i class="bi bi-people me-2"></i>用户管理</h4><button class="btn btn-danger btn-sm" onclick="showModal('add')"><i class="bi bi-plus-lg me-1"></i>新建用户</button></div>
+<div class="filter-row mb-3">
+    <input class="form-control form-control-sm" placeholder="用户名" id="fUsername" style="width:130px">
+    <input class="form-control form-control-sm" placeholder="真实姓名" id="fRealName" style="width:130px">
+    <select class="form-select form-select-sm" id="fUserType" style="width:140px"><option value="">用户类型</option><option value="1">超级用户</option><option value="2">普通用户</option></select>
+    <select class="form-select form-select-sm" id="fStatus" style="width:120px"><option value="">状态</option><option value="1">启用</option><option value="0">禁用</option></select>
+    <button class="btn btn-outline-secondary btn-sm" onclick="loadUsers()"><i class="bi bi-search"></i> 筛选</button>
+</div>
+<div class="table-responsive"><table class="table table-hover align-middle">
+<thead><tr><th>ID</th><th>用户名</th><th>真实姓名</th><th>类型</th><th>部门</th><th>角色</th><th>状态</th><th>登录次数</th><th>最后登录</th><th>操作</th></tr></thead>
+<tbody id="userTableBody"><tr><td colspan="10" class="text-center py-4">加载中...</td></tr></tbody>
+</table></div>
+<div class="d-flex justify-content-between align-items-center mt-3"><small class="text-muted" id="pageInfo"></small><div class="btn-group btn-group-sm" id="pagination"></div></div>
+</div></div></div>
+
+<div class="modal fade" id="userModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-danger text-white"><h6 class="modal-title"><i class="bi bi-person me-1"></i><span id="modalTitle">新建用户</span></h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="userId">
+<div class="row g-3">
+<div class="col-md-6"><label class="form-label">用户名 <span class="text-danger">*</span></label><input class="form-control" id="uUsername"></div>
+<div class="col-md-6"><label class="form-label">密码 <span class="text-danger" id="pwdRequired">*</span></label><input class="form-control" type="password" id="uPassword" placeholder="留空则不修改"></div>
+<div class="col-md-6"><label class="form-label">真实姓名</label><input class="form-control" id="uRealName"></div>
+<div class="col-md-6"><label class="form-label">邮箱</label><input class="form-control" type="email" id="uEmail"></div>
+<div class="col-md-6"><label class="form-label">手机号</label><input class="form-control" id="uPhone"></div>
+<div class="col-md-6"><label class="form-label">用户类型</label><select class="form-select" id="uUserType"><option value="2">普通用户</option><option value="1">超级用户</option></select></div>
+<div class="col-md-6"><label class="form-label">所属部门</label><select class="form-select" id="uDept"><option value="">请选择</option>{% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}</select></div>
+<div class="col-md-6"><label class="form-label">所属角色</label><select class="form-select" id="uRole"><option value="">请选择</option>{% for r in roles %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select></div>
+<div class="col-md-6"><label class="form-label">状态</label><select class="form-select" id="uStatus"><option value="1">启用</option><option value="0">禁用</option></select></div>
+</div></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-danger" onclick="saveUser()">保存</button></div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let editMode='add',currentPage=1;
+$(function(){loadUsers();});
+function loadUsers(page=1){currentPage=page;let params={page,per_page:15,username:$('#fUsername').val(),real_name:$('#fRealName').val(),user_type:$('#fUserType').val(),status:$('#fStatus').val()};Object.keys(params).forEach(k=>{if(!params[k])delete params[k]});$.get('/api/v1/users',params,function(res){if(res.code===200){let rows=res.data.items.map(u=>`<tr><td>${u.id}</td><td>${u.username}</td><td>${u.real_name||'-'}</td><td><span class="badge bg-${u.user_type===1?'danger':'primary'}">${u.user_type_name}</span></td><td>${u.department_name||'-'}</td><td>${u.role_name||'-'}</td><td><span class="badge bg-${u.status===1?'success':'secondary'}">${u.status===1?'启用':'禁用'}</span></td><td>${u.login_count||0}</td><td>${u.last_login_at||'-'}</td><td><button class="btn btn-info btn-sm text-white me-1" onclick="editUser(${u.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id},'${u.username}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');$('#userTableBody').html(rows||'<tr><td colspan="10" class="text-center py-4 text-muted">暂无数据</td></tr>');$('#pageInfo').text(`共 ${res.data.total} 条，第 ${res.data.page}/${res.data.pages} 页`);renderPagination(res.data);}});}
+function renderPagination(d){let h='';for(let i=1;i<=d.pages;i++)h+=`<button class="btn btn-${i===d.page?'danger':'outline-secondary'}" onclick="loadUsers(${i})">${i}</button>`;$('#pagination').html(h);}
+function showModal(mode){editMode=mode;$('#modalTitle').text(mode==='add'?'新建用户':'修改用户');$('#userId').val('');$('#uUsername').val('');$('#uPassword').val('');$('#uRealName').val('');$('#uEmail').val('');$('#uPhone').val('');$('#uUserType').val(2);$('#uDept').val('');$('#uRole').val('');$('#uStatus').val(1);$('#pwdRequired').text(mode==='add'?'*':'');$('#userModal').modal('show');}
+function editUser(uid){$.get('/api/v1/users?page=1&per_page=100',function(res){let u=res.data.items.find(i=>i.id===uid);if(!u)return alert('用户不存在');editMode='edit';$('#modalTitle').text('修改用户');$('#userId').val(u.id);$('#uUsername').val(u.username);$('#uPassword').val('');$('#uRealName').val(u.real_name||'');$('#uEmail').val(u.email||'');$('#uPhone').val(u.phone||'');$('#uUserType').val(u.user_type);$('#uDept').val(u.department_id||'');$('#uRole').val(u.role_id||'');$('#uStatus').val(u.status);$('#pwdRequired').text('');$('#userModal').modal('show');});}
+function saveUser(){let data={username:$('#uUsername').val(),real_name:$('#uRealName').val(),email:$('#uEmail').val(),phone:$('#uPhone').val(),user_type:parseInt($('#uUserType').val()),department_id:$('#uDept').val()||null,role_id:$('#uRole').val()||null,status:parseInt($('#uStatus').val())};let pwd=$('#uPassword').val();if(pwd)data.password=pwd;if(!data.username)return alert('请输入用户名');if(editMode==='add'&&!pwd)return alert('请输入密码');let url=editMode==='add'?'/api/v1/users':'/api/v1/users/'+$('#userId').val(),method=editMode==='add'?'POST':'PUT';$.ajax({url,method,contentType:'application/json',data:JSON.stringify(data),success(r){alert(r.msg);$('#userModal').modal('hide');loadUsers(currentPage);},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});}
+function deleteUser(id,name){if(!confirm('确定删除用户「'+name+'」吗？'))return;$.ajax({url:'/api/v1/users/'+id,method:'DELETE',success(r){alert(r.msg);loadUsers(currentPage);},error(xhr){alert(xhr.responseJSON?.msg||'删除失败');}});}
+</script>
+{% endblock %}

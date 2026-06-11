@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}角色管理 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>.page-container{padding:20px;background:#f5f6fa;min-height:calc(100vh - 100px)}.card-custom{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.table th{background:#f8f9fa;font-size:13px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #e74c3c}.perm-checkboxes{max-height:200px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:8px;padding:12px}.perm-checkboxes label{display:block;padding:3px 0;font-size:13px;cursor:pointer}</style>{% endblock %}
+{% block content %}
+<div class="page-container"><div class="container-fluid"><div class="card-custom">
+<div class="toolbar"><h4 class="fw-bold m-0"><i class="bi bi-person-badge me-2"></i>角色管理</h4><button class="btn btn-danger btn-sm" onclick="showModal('add')"><i class="bi bi-plus-lg me-1"></i>新建角色</button></div>
+<div class="table-responsive"><table class="table table-hover align-middle">
+<thead><tr><th>ID</th><th>角色名称</th><th>编码</th><th>描述</th><th>权限数</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+<tbody>{% for r in roles %}<tr><td>{{ r.id }}</td><td><strong>{{ r.name }}</strong></td><td>{{ r.code or '-' }}</td><td>{{ r.description or '-' }}</td><td>{{ r.get_permissions()|length }}</td><td><span class="badge bg-{{ 'success' if r.status==1 else 'secondary' }}">{{ '启用' if r.status==1 else '禁用' }}</span></td><td>{{ r.created_at|datetime_format }}</td><td><button class="btn btn-info btn-sm text-white me-1" onclick="editRole({{ r.to_dict()|tojson }})"><i class="bi bi-pencil"></i></button><button class="btn btn-danger btn-sm" onclick="deleteRole({{ r.id }},'{{ r.name }}')"><i class="bi bi-trash"></i></button></td></tr>{% else %}<tr><td colspan="8" class="text-center py-4 text-muted">暂无角色数据</td></tr>{% endfor %}</tbody>
+</table></div></div></div></div>
+
+<div class="modal fade" id="roleModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-danger text-white"><h6 class="modal-title"><i class="bi bi-person-badge me-1"></i><span id="modalTitle">新建角色</span></h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="roleId">
+<div class="mb-3"><label class="form-label">角色名称 <span class="text-danger">*</span></label><input class="form-control" id="rName"></div>
+<div class="mb-3"><label class="form-label">角色编码</label><input class="form-control" id="rCode"></div>
+<div class="mb-3"><label class="form-label">描述</label><textarea class="form-control" id="rDesc" rows="2"></textarea></div>
+<div class="mb-3"><label class="form-label">权限设置</label><div class="perm-checkboxes" id="permList"></div></div>
+<div class="mb-3"><label class="form-label">状态</label><select class="form-select" id="rStatus"><option value="1">启用</option><option value="0">禁用</option></select></div>
+</div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-danger" onclick="saveRole()">保存</button></div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const ALL_PERMS=[
+    {key:'system:config',label:'系统配置'},{key:'system:department',label:'部门管理'},{key:'system:user',label:'用户管理'},{key:'system:role',label:'角色管理'},{key:'system:datadict',label:'数据字典'},
+    {key:'device:cloudbox',label:'AI云盒管理'},{key:'device:camera',label:'摄像头管理'},{key:'device:view',label:'设备查看'},
+    {key:'alarm:event',label:'报警事件'},{key:'alarm:review',label:'事件审核'},{key:'alarm:camera_fault',label:'摄像头故障'},{key:'alarm:cloudbox_fault',label:'AI云盒故障'},
+    {key:'log:access',label:'访问日志'},{key:'log:operation',label:'操作日志'},{key:'log:view',label:'日志查看'}
+];
+let editMode='add';
+$(function(){
+    let h=ALL_PERMS.map(p=>`<label><input type="checkbox" value="${p.key}" class="perm-cb"> ${p.label}</label>`).join('');
+    $('#permList').html(h);
+});
+function getCheckedPerms(){return $('.perm-cb:checked').map(function(){return $(this).val();}).get();}
+function setCheckedPerms(perms){$('.perm-cb').prop('checked',false);(perms||[]).forEach(p=>$(`.perm-cb[value="${p}"]`).prop('checked',true));}
+function showModal(mode){editMode=mode;$('#modalTitle').text(mode==='add'?'新建角色':'修改角色');$('#roleId').val('');$('#rName').val('');$('#rCode').val('');$('#rDesc').val('');$('#rStatus').val(1);setCheckedPerms([]);$('#roleModal').modal('show');}
+function editRole(r){editMode='edit';$('#modalTitle').text('修改角色');$('#roleId').val(r.id);$('#rName').val(r.name);$('#rCode').val(r.code||'');$('#rDesc').val(r.description||'');$('#rStatus').val(r.status);setCheckedPerms(r.permissions||[]);$('#roleModal').modal('show');}
+function saveRole(){
+    let data={name:$('#rName').val(),code:$('#rCode').val(),description:$('#rDesc').val(),status:parseInt($('#rStatus').val()),permissions:getCheckedPerms()};
+    if(!data.name)return alert('请输入角色名称');
+    let url=editMode==='add'?'/api/v1/roles':'/api/v1/roles/'+$('#roleId').val(),method=editMode==='add'?'POST':'PUT';
+    $.ajax({url,method,contentType:'application/json',data:JSON.stringify(data),success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});
+}
+function deleteRole(id,name){if(!confirm('确定删除角色「'+name+'」吗？'))return;$.ajax({url:'/api/v1/roles/'+id,method:'DELETE',success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'删除失败');}});}
+</script>
+{% endblock %}
