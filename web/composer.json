@@ -14,7 +14,9 @@
 		"php": ">=5.3.7",
 		"firebase/php-jwt": "^5.0",
 		"predis/predis": "^1.1",
-		"phpoffice/phpexcel": "^1.8"
+		"phpoffice/phpexcel": "^1.8",
+		"phpmailer/phpmailer": "^5.2",
+		"phpoffice/phpword": "^0.18"
 	},
 	"suggest": {
 		"paragonie/random_compat": "Provides better randomness in PHP 5.x"

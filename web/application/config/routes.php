@@ -84,3 +84,13 @@ $route['api/devices/(:num)/delete']         = 'api/Device/delete/$1';
 // 统计分析
 $route['api/statistics']                    = 'api/Statistics/index';
 $route['api/statistics/health']             = 'api/Statistics/health';
+
+// 文档导出
+$route['api/export/excel']                  = 'api/Export/excel';
+$route['api/export/word']                   = 'api/Export/word';
+
+// WebService 数据交换
+$route['api/webservice/alarm']              = 'api/WebService/alarm';
+$route['api/webservice/device/(:num)']      = 'api/WebService/device/$1';
+$route['api/webservice/video-frame/(:num)'] = 'api/WebService/video_frame/$1';
+$route['api/webservice/report']             = 'api/WebService/report';

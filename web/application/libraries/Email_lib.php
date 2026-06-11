@@ -36,10 +36,23 @@ class Email_lib {
      * 发送报警通知邮件给管理员
      */
     public function send_alarm_notify($event_id, $data) {
-        if (empty($this->smtp_user)) {
-            log_message('info', 'Email not configured, skip alarm notify for event#' . $event_id);
+        // 从数据库获取管理员邮箱
+        $admins = $this->CI->db
+            ->select('u.Email, u.Phone')
+            ->from('T_User u')
+            ->join('T_UserRole ur', 'u.Id = ur.UserId')
+            ->join('T_Role r', 'ur.RoleId = r.Id')
+            ->where('r.Name', '超级管理员')
+            ->where('u.Email IS NOT NULL')
+            ->get()->result_array();
+
+        $admin_emails = array_column($admins, 'Email');
+        if (empty($admin_emails) && empty($this->alert_emails)) {
+            log_message('info', 'No admin email found, skip notify for event#' . $event_id);
             return false;
         }
+
+        $recipients = !empty($admin_emails) ? $admin_emails : $this->alert_emails;
 
         $this->CI->load->library('email');
 
@@ -74,8 +87,8 @@ class Email_lib {
             <p>请登录系统进行处理。</p>
         ";
 
-        $this->CI->email->from($this->smtp_user, '火焰识别预警系统');
-        $this->CI->email->to($this->alert_emails);
+        $this->CI->email->from($this->smtp_user ?: 'noreply@flame-detect.local', '火焰识别预警系统');
+        $this->CI->email->to($recipients);
         $this->CI->email->subject($subject);
         $this->CI->email->message($message);
 
