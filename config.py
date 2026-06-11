@@ -34,8 +34,9 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'fire-alarm-jwt-secret-2026')
     JWT_ACCESS_TOKEN_EXPIRES = 86400  # 24小时
 
-    # 百度地图API配置
-    BAIDU_MAP_AK = os.environ.get('BAIDU_MAP_AK', '您的百度地图AK密钥')
+    # 高德地图 JSAPI v2.0 配置
+    AMAP_KEY = os.environ.get('AMAP_KEY', 'f0b4c2a6ad6b8cd5217e8ce5b7241533')
+    AMAP_SECURITY_CODE = os.environ.get('AMAP_SECURITY_CODE', '2dec66e25eca031237ced6442e02bbe6')
 
     # 火焰检测阈值配置
     FIRE_DETECTION_THRESHOLD = 0.85       # 火焰检测置信度阈值（默认85%）

@@ -25,8 +25,8 @@
         position: relative;
     }
 
-    /* ===== GIS地图容器 ===== */
-    #baiduMap {
+    /* ===== 高德地图容器 ===== */
+    #amapContainer {
         width: 100%;
         height: 100%;
         position: absolute;
@@ -224,54 +224,56 @@
 
     .ticker-item .ticker-time { color: #888; font-size: 11px; }
 
-    /* ===== 百度地图信息窗口样式覆盖 ===== */
-    .BMapLib-popup { border-radius: 12px !important; overflow: hidden !important; }
-
-    .info-window {
-        padding: 8px;
-        min-width: 240px;
-        max-width: 350px;
+    /* ===== 高德地图信息窗口样式 ===== */
+    .amap-info-window {
+        padding: 0;
+        min-width: 260px;
+        max-width: 360px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        overflow: hidden;
+        font-family: -apple-system,BlinkMacSystemFont,'Microsoft YaHei',sans-serif;
     }
-
-    .info-window h6 {
-        margin: 0 0 8px;
+    .amap-info-window .iw-header {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: #fff;
+        padding: 12px 16px;
         font-size: 15px;
         font-weight: 700;
-        color: #1a1a2e;
-        border-bottom: 2px solid #e74c3c;
-        padding-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
-
-    .info-window .info-row {
+    .amap-info-window .iw-body {
+        padding: 12px 16px;
+    }
+    .amap-info-window .iw-row {
         display: flex;
         justify-content: space-between;
-        padding: 3px 0;
+        padding: 4px 0;
         font-size: 13px;
         color: #555;
     }
-
-    .info-window .info-row .label { color: #888; }
-    .info-window .info-row .value { font-weight: 500; color: #333; }
-
-    .info-window .info-images {
+    .amap-info-window .iw-row .label { color: #888; }
+    .amap-info-window .iw-row .value { font-weight: 500; color: #333; }
+    .amap-info-window .iw-images {
         display: flex;
         gap: 6px;
         margin-top: 8px;
     }
-
-    .info-window .info-images img {
+    .amap-info-window .iw-images img {
         width: 80px;
         height: 60px;
         object-fit: cover;
         border-radius: 6px;
         cursor: pointer;
     }
-
-    .info-window .btn-detail {
+    .amap-info-window .btn-detail {
         display: block;
         width: 100%;
-        margin-top: 8px;
-        padding: 6px;
+        margin-top: 10px;
+        padding: 8px;
         background: #e74c3c;
         color: #fff;
         border: none;
@@ -281,8 +283,15 @@
         text-align: center;
         text-decoration: none;
     }
+    .amap-info-window .btn-detail:hover { background: #c0392b; }
 
-    .info-window .btn-detail:hover { background: #c0392b; }
+    /* 报警标记跳动动画 */
+    @keyframes markerBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+    .marker-bounce { animation: markerBounce 1s ease-in-out infinite; }
+    .marker-bounce:nth-child(odd) { animation-delay: 0.3s; }
 
     /* ===== 响应式 ===== */
     @media (max-width: 768px) {
@@ -318,8 +327,8 @@
 {% endblock %}
 
 {% block content %}
-<!-- ===== 百度地图主体 ===== -->
-<div id="baiduMap"></div>
+<!-- ===== 高德地图主体 ===== -->
+<div id="amapContainer"></div>
 
 <!-- ===== 左侧统计面板 ===== -->
 <div class="stats-panel" id="statsPanel">
@@ -420,12 +429,19 @@
 
 {% block extra_js %}
 <script>
+    // ===== 高德地图安全配置（必须在加载前设置） =====
+    window._AMapSecurityConfig = {
+        securityJsCode: '{{ config.AMAP_SECURITY_CODE }}'
+    };
+
     // ===== 全局变量 =====
     let map = null;
+    let AMapLib = null;
     let alarmMarkers = [];
     let cameraMarkers = [];
     let faultMarkers = [];
     let layerVisibility = { alarm: true, camera: true, fault: true };
+    let currentInfoWindow = null;
 
     // 后端数据
     const cameraData = {{ camera_list_json | safe }};
@@ -434,92 +450,143 @@
     const alarmByDate = {{ alarm_by_date_json | safe }};
     const regionData = {{ region_data_json | safe }};
 
-    // 图标配置
-    const ICONS = {
-        camera: {
-            url: 'data:image/svg+xml,' + encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' +
-                '<circle cx="16" cy="16" r="14" fill="#3498db" stroke="#fff" stroke-width="2"/>' +
-                '<text x="16" y="21" text-anchor="middle" fill="#fff" font-size="14">📷</text>' +
-                '</svg>'
-            ),
-            size: new BMap.Size(32, 32)
-        },
-        alarm: {
-            url: 'data:image/svg+xml,' + encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">' +
-                '<circle cx="18" cy="18" r="16" fill="#e74c3c" stroke="#fff" stroke-width="2"/>' +
-                '<text x="18" y="23" text-anchor="middle" fill="#fff" font-size="16">🔥</text>' +
-                '</svg>'
-            ),
-            size: new BMap.Size(36, 36)
-        },
-        fault: {
-            url: 'data:image/svg+xml,' + encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' +
-                '<circle cx="16" cy="16" r="14" fill="#e74c3c" stroke="#fff" stroke-width="2"/>' +
-                '<text x="16" y="21" text-anchor="middle" fill="#fff" font-size="14">⚠</text>' +
-                '</svg>'
-            ),
-            size: new BMap.Size(32, 32)
-        }
-    };
+    // 重庆市坐标
+    const CHONGQING_CENTER = [106.5516, 29.5630];
 
-    // ===== 初始化地图 =====
+    // ===== 创建自定义图标（SVG转Base64） =====
+    function createCameraIcon() {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+            <circle cx="18" cy="16" r="14" fill="#3498db" stroke="#fff" stroke-width="2.5"/>
+            <rect x="11" y="11" width="14" height="10" rx="2" fill="#fff"/>
+            <circle cx="18" cy="16" r="3" fill="#3498db"/>
+            <rect x="14" y="8" width="8" height="3" rx="1.5" fill="#fff"/>
+        </svg>`;
+        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    }
+
+    function createAlarmIcon() {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="18" r="17" fill="#e74c3c" stroke="#fff" stroke-width="2.5"/>
+            <text x="20" y="26" text-anchor="middle" fill="#fff" font-size="22">🔥</text>
+        </svg>`;
+        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    }
+
+    function createFaultIcon() {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+            <circle cx="18" cy="16" r="14" fill="#e74c3c" stroke="#fff" stroke-width="2.5"/>
+            <text x="18" y="23" text-anchor="middle" fill="#fff" font-size="20">⚠</text>
+        </svg>`;
+        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    }
+
+    // ===== 初始化高德地图 =====
     function initMap() {
-        // 默认中心点（中国中部）
-        const defaultCenter = new BMap.Point(116.404, 39.915);
+        const mapContainer = document.getElementById('amapContainer');
+        if (!mapContainer) return;
 
-        map = new BMap.Map('baiduMap', {
-            enableMapClick: true,
-            minZoom: 4,
-            maxZoom: 19
-        });
-
-        map.centerAndZoom(defaultCenter, 12);
-        map.enableScrollWheelZoom(true);
-        map.addControl(new BMap.NavigationControl());
-        map.addControl(new BMap.ScaleControl());
-        map.addControl(new BMap.MapTypeControl());
-
-        // 地图样式：暗色主题
-        map.setMapStyleV2({ styleId: '299043a7f1e28fe6cdbd8efc52e005d6' });
-
-        // 如果有摄像头数据，居中到第一个摄像头
-        if (cameraData.length > 0) {
-            const first = cameraData[0];
-            if (first.longitude && first.latitude) {
-                map.centerAndZoom(new BMap.Point(first.longitude, first.latitude), 13);
-            }
+        // 如果AMapLoader未加载，显示提示
+        if (typeof AMapLoader === 'undefined') {
+            mapContainer.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;
+                            background:#1a1a2e;color:#fff;flex-direction:column;gap:20px;">
+                    <i class="bi bi-map" style="font-size:80px;color:#e74c3c;"></i>
+                    <h4>高德地图加载中...</h4>
+                    <p class="text-muted">请确保已配置有效的高德地图Key和安全密钥</p>
+                    <p class="text-muted small">配置路径：系统设置 → 系统配置 → 高德地图设置</p>
+                </div>`;
+            return;
         }
 
-        // 加载标注
-        loadCameraMarkers();
-        loadAlarmMarkers();
-        loadFaultMarkers();
-        loadTicker();
+        AMapLoader.load({
+            key: '{{ config.AMAP_KEY }}',
+            version: '2.0',
+            plugins: ['AMap.ToolBar', 'AMap.Scale', 'AMap.MapType', 'AMap.ControlBar']
+        }).then((AMap) => {
+            // 强制：设置应用标识
+            AMap.getConfig().appname = 'amap-jsapi-skill';
+            AMapLib = AMap;
 
-        // 窗口大小变化时重绘地图
-        window.addEventListener('resize', () => {
-            if (map) setTimeout(() => map.checkResize(), 100);
+            // 创建地图实例
+            map = new AMap.Map('amapContainer', {
+                viewMode: '3D',
+                zoom: 12,
+                center: CHONGQING_CENTER,
+                pitch: 45,
+                rotation: 0,
+                mapStyle: 'amap://styles/dark',
+                zooms: [4, 19],
+                resizeEnable: true
+            });
+
+            // 添加控件
+            map.addControl(new AMap.ToolBar({ position: { right: '20px', top: '180px' } }));
+            map.addControl(new AMap.Scale({ position: { left: '20px', bottom: '60px' } }));
+            map.addControl(new AMap.ControlBar({ position: { right: '20px', top: '260px' } }));
+
+            // 地图加载完成
+            map.on('complete', function() {
+                console.log('高德地图加载完成 - 重庆市');
+            });
+
+            // 如果有摄像头数据，居中到第一个摄像头
+            if (cameraData.length > 0) {
+                const first = cameraData[0];
+                if (first.longitude && first.latitude) {
+                    map.setCenter([first.longitude, first.latitude]);
+                    map.setZoom(13);
+                }
+            }
+
+            // 加载标注
+            loadCameraMarkers();
+            loadAlarmMarkers();
+            loadFaultMarkers();
+            loadTicker();
+
+            // 点击地图关闭信息窗
+            map.on('click', function() {
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                    currentInfoWindow = null;
+                }
+            });
+
+        }).catch((e) => {
+            console.error('高德地图加载失败:', e);
+            mapContainer.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;
+                            background:#1a1a2e;color:#fff;flex-direction:column;gap:20px;">
+                    <i class="bi bi-exclamation-triangle" style="font-size:80px;color:#f39c12;"></i>
+                    <h4>地图加载失败</h4>
+                    <p class="text-muted">请检查：1. 高德地图Key是否正确 2. 安全密钥是否匹配 3. 网络连接是否正常</p>
+                </div>`;
         });
     }
 
     // ===== 加载摄像头标注 =====
     function loadCameraMarkers() {
         clearMarkers('camera');
+        if (!map || !AMapLib) return;
+
         cameraData.forEach(cam => {
             if (!cam.longitude || !cam.latitude) return;
-            const point = new BMap.Point(cam.longitude, cam.latitude);
-            const marker = new BMap.Marker(point, { icon: createIcon('camera') });
-            marker.setTitle(cam.device_name);
-            marker.cameraInfo = cam;
-
-            marker.addEventListener('click', function() {
-                showCameraInfoWindow(this);
+            const marker = new AMapLib.Marker({
+                position: [cam.longitude, cam.latitude],
+                icon: new AMapLib.Icon({
+                    size: new AMapLib.Size(36, 36),
+                    image: createCameraIcon(),
+                    imageSize: new AMapLib.Size(36, 36),
+                    imageOffset: new AMapLib.Pixel(0, 0)
+                }),
+                offset: new AMapLib.Pixel(-18, -18),
+                title: cam.device_name,
+                zIndex: 100,
+                extData: cam
             });
 
-            map.addOverlay(marker);
+            marker.on('click', function() { showCameraInfoWindow(this); });
+            map.add(marker);
             cameraMarkers.push(marker);
         });
     }
@@ -527,21 +594,33 @@
     // ===== 加载报警标注 =====
     function loadAlarmMarkers() {
         clearMarkers('alarm');
-        alarmData.forEach(alarm => {
+        if (!map || !AMapLib) return;
+
+        alarmData.forEach((alarm, index) => {
             if (!alarm.longitude || !alarm.latitude) return;
-            const point = new BMap.Point(alarm.longitude, alarm.latitude);
-            const marker = new BMap.Marker(point, { icon: createIcon('alarm') });
-            marker.setTitle(alarm.event_code);
-            marker.alarmInfo = alarm;
-
-            // 报警标注跳动动画
-            marker.setAnimation(BMAP_ANIMATION_BOUNCE);
-
-            marker.addEventListener('click', function() {
-                showAlarmInfoWindow(this);
+            const marker = new AMapLib.Marker({
+                position: [alarm.longitude, alarm.latitude],
+                icon: new AMapLib.Icon({
+                    size: new AMapLib.Size(40, 40),
+                    image: createAlarmIcon(),
+                    imageSize: new AMapLib.Size(40, 40)
+                }),
+                offset: new AMapLib.Pixel(-20, -20),
+                title: alarm.event_code,
+                zIndex: 200,
+                extData: alarm
             });
 
-            map.addOverlay(marker);
+            // 跳动动画 - 通过DOM操作
+            marker.on('click', function() { showAlarmInfoWindow(this); });
+            map.add(marker);
+
+            // 添加跳动CSS类
+            try {
+                const dom = marker.getContent();
+                if (dom) dom.classList.add('marker-bounce');
+            } catch(e) {}
+
             alarmMarkers.push(marker);
         });
     }
@@ -549,29 +628,26 @@
     // ===== 加载故障摄像头标注 =====
     function loadFaultMarkers() {
         clearMarkers('fault');
+        if (!map || !AMapLib) return;
+
         faultData.forEach(cam => {
             if (!cam.longitude || !cam.latitude) return;
-            const point = new BMap.Point(cam.longitude, cam.latitude);
-            const marker = new BMap.Marker(point, { icon: createIcon('fault') });
-            marker.setTitle('故障: ' + cam.device_name);
-            marker.cameraInfo = cam;
-            marker.isFault = true;
-
-            marker.addEventListener('click', function() {
-                showFaultInfoWindow(this);
+            const marker = new AMapLib.Marker({
+                position: [cam.longitude, cam.latitude],
+                icon: new AMapLib.Icon({
+                    size: new AMapLib.Size(36, 36),
+                    image: createFaultIcon(),
+                    imageSize: new AMapLib.Size(36, 36)
+                }),
+                offset: new AMapLib.Pixel(-18, -18),
+                title: '故障: ' + cam.device_name,
+                zIndex: 150,
+                extData: cam
             });
 
-            map.addOverlay(marker);
+            marker.on('click', function() { showFaultInfoWindow(this); });
+            map.add(marker);
             faultMarkers.push(marker);
-        });
-    }
-
-    // ===== 创建图标 =====
-    function createIcon(type) {
-        const cfg = ICONS[type];
-        return new BMap.Icon(cfg.url, cfg.size, {
-            anchor: new BMap.Size(cfg.size.width / 2, cfg.size.height / 2),
-            imageSize: cfg.size
         });
     }
 
@@ -582,79 +658,111 @@
         else if (type === 'alarm') markers = alarmMarkers;
         else markers = faultMarkers;
 
-        markers.forEach(m => map.removeOverlay(m));
+        markers.forEach(m => {
+            if (map) map.remove(m);
+        });
         markers.length = 0;
     }
 
     // ===== 摄像头信息窗口 =====
     function showCameraInfoWindow(marker) {
-        const cam = marker.cameraInfo;
-        const html = `
-            <div class="info-window">
-                <h6><i class="bi bi-camera-video"></i> ${cam.device_name || '摄像头'}</h6>
-                <div class="info-row"><span class="label">设备编码</span><span class="value">${cam.device_code || '-'}</span></div>
-                <div class="info-row"><span class="label">设备型号</span><span class="value">${cam.device_model || '-'}</span></div>
-                <div class="info-row"><span class="label">监测物质</span><span class="value">${cam.monitor_substance || '火焰/烟雾'}</span></div>
-                <div class="info-row"><span class="label">安装位置</span><span class="value">${cam.location || '-'}</span></div>
-                <div class="info-row"><span class="label">经纬度</span><span class="value">${cam.longitude?.toFixed(6)}, ${cam.latitude?.toFixed(6)}</span></div>
-                <div class="info-row"><span class="label">状态</span><span class="value">${cam.status_name || '正常'}</span></div>
-                ${cam.cloud_box_name ? `<div class="info-row"><span class="label">关联云盒</span><span class="value">${cam.cloud_box_name}</span></div>` : ''}
+        if (currentInfoWindow) { currentInfoWindow.close(); }
+        const cam = marker.getExtData();
+        if (!cam) return;
+
+        const content = `
+            <div class="amap-info-window">
+                <div class="iw-header">
+                    <span>📷</span> ${cam.device_name || '摄像头'}
+                </div>
+                <div class="iw-body">
+                    <div class="iw-row"><span class="label">设备编码</span><span class="value">${cam.device_code || '-'}</span></div>
+                    <div class="iw-row"><span class="label">设备型号</span><span class="value">${cam.device_model || '-'}</span></div>
+                    <div class="iw-row"><span class="label">监测物质</span><span class="value">${cam.monitor_substance || '火焰/烟雾'}</span></div>
+                    <div class="iw-row"><span class="label">安装位置</span><span class="value">${cam.location || '-'}</span></div>
+                    <div class="iw-row"><span class="label">经纬度</span><span class="value">${Number(cam.longitude).toFixed(6)}, ${Number(cam.latitude).toFixed(6)}</span></div>
+                    <div class="iw-row"><span class="label">状态</span><span class="value">${cam.status_name || '正常'}</span></div>
+                    ${cam.cloud_box_name ? `<div class="iw-row"><span class="label">关联云盒</span><span class="value">${cam.cloud_box_name}</span></div>` : ''}
+                </div>
             </div>
         `;
-        const infoWindow = new BMap.InfoWindow(html, {
-            width: 280,
-            title: '',
-            enableMessage: false
+
+        currentInfoWindow = new AMapLib.InfoWindow({
+            content: content,
+            offset: new AMapLib.Pixel(0, -40),
+            isCustom: true,
+            autoMove: true,
+            closeWhenClickMap: false
         });
-        marker.openInfoWindow(infoWindow);
+        currentInfoWindow.open(map, marker.getPosition());
     }
 
     // ===== 报警信息窗口 =====
     function showAlarmInfoWindow(marker) {
-        const alarm = marker.alarmInfo;
-        const html = `
-            <div class="info-window">
-                <h6><i class="bi bi-fire"></i> ${alarm.event_type_name || '火焰报警'}</h6>
-                <div class="info-row"><span class="label">事件编号</span><span class="value">${alarm.event_code || '-'}</span></div>
-                <div class="info-row"><span class="label">报警级别</span><span class="value" style="color:#e74c3c;font-weight:700;">${alarm.alarm_level_name || '-'}</span></div>
-                <div class="info-row"><span class="label">置信度</span><span class="value">${alarm.detection_confidence ? (alarm.detection_confidence * 100).toFixed(1) + '%' : '-'}</span></div>
-                <div class="info-row"><span class="label">检测时间</span><span class="value">${alarm.detected_at || '-'}</span></div>
-                <div class="info-row"><span class="label">位置描述</span><span class="value">${alarm.location_description || '-'}</span></div>
-                <div class="info-row"><span class="label">经纬度</span><span class="value">${alarm.longitude?.toFixed(6)}, ${alarm.latitude?.toFixed(6)}</span></div>
-                <div class="info-row"><span class="label">处理状态</span><span class="value">${alarm.process_status_name || '-'}</span></div>
-                ${alarm.camera_name ? `<div class="info-row"><span class="label">关联摄像头</span><span class="value">${alarm.camera_name}</span></div>` : ''}
-                ${alarm.image_url ? `<div class="info-images"><img src="${alarm.image_url}" alt="取证图片" onerror="this.style.display='none'"></div>` : ''}
-                <a href="/alarm/event" class="btn-detail" target="_blank">查看详情 →</a>
+        if (currentInfoWindow) { currentInfoWindow.close(); }
+        const alarm = marker.getExtData();
+        if (!alarm) return;
+
+        const confidence = alarm.detection_confidence ? (alarm.detection_confidence * 100).toFixed(1) + '%' : '-';
+        const content = `
+            <div class="amap-info-window">
+                <div class="iw-header">
+                    <span>🔥</span> ${alarm.event_type_name || '火焰报警'}
+                </div>
+                <div class="iw-body">
+                    <div class="iw-row"><span class="label">事件编号</span><span class="value">${alarm.event_code || '-'}</span></div>
+                    <div class="iw-row"><span class="label">报警级别</span><span class="value" style="color:#e74c3c;font-weight:700;">${alarm.alarm_level_name || '-'}</span></div>
+                    <div class="iw-row"><span class="label">置信度</span><span class="value">${confidence}</span></div>
+                    <div class="iw-row"><span class="label">检测时间</span><span class="value">${alarm.detected_at || '-'}</span></div>
+                    <div class="iw-row"><span class="label">位置描述</span><span class="value">${alarm.location_description || '-'}</span></div>
+                    <div class="iw-row"><span class="label">经纬度</span><span class="value">${Number(alarm.longitude).toFixed(6)}, ${Number(alarm.latitude).toFixed(6)}</span></div>
+                    <div class="iw-row"><span class="label">处理状态</span><span class="value">${alarm.process_status_name || '-'}</span></div>
+                    ${alarm.camera_name ? `<div class="iw-row"><span class="label">关联摄像头</span><span class="value">${alarm.camera_name}</span></div>` : ''}
+                    <a href="/alarm/event" class="btn-detail" target="_blank">查看详情 →</a>
+                </div>
             </div>
         `;
-        const infoWindow = new BMap.InfoWindow(html, {
-            width: 300,
-            title: '',
-            enableMessage: false
+
+        currentInfoWindow = new AMapLib.InfoWindow({
+            content: content,
+            offset: new AMapLib.Pixel(0, -45),
+            isCustom: true,
+            autoMove: true,
+            closeWhenClickMap: false
         });
-        marker.openInfoWindow(infoWindow);
+        currentInfoWindow.open(map, marker.getPosition());
     }
 
     // ===== 故障信息窗口 =====
     function showFaultInfoWindow(marker) {
-        const cam = marker.cameraInfo;
-        const html = `
-            <div class="info-window">
-                <h6 style="border-color:#e74c3c;"><i class="bi bi-exclamation-triangle"></i> 故障摄像头</h6>
-                <div class="info-row"><span class="label">设备名称</span><span class="value">${cam.device_name || '-'}</span></div>
-                <div class="info-row"><span class="label">设备编码</span><span class="value">${cam.device_code || '-'}</span></div>
-                <div class="info-row"><span class="label">故障状态</span><span class="value" style="color:#e74c3c;">${cam.status_name || '故障'}</span></div>
-                <div class="info-row"><span class="label">安装位置</span><span class="value">${cam.location || '-'}</span></div>
-                <div class="info-row"><span class="label">经纬度</span><span class="value">${cam.longitude?.toFixed(6)}, ${cam.latitude?.toFixed(6)}</span></div>
-                <a href="/alarm/camera-fault" class="btn-detail" target="_blank">查看故障详情 →</a>
+        if (currentInfoWindow) { currentInfoWindow.close(); }
+        const cam = marker.getExtData();
+        if (!cam) return;
+
+        const content = `
+            <div class="amap-info-window">
+                <div class="iw-header">
+                    <span>⚠</span> 故障摄像头
+                </div>
+                <div class="iw-body">
+                    <div class="iw-row"><span class="label">设备名称</span><span class="value">${cam.device_name || '-'}</span></div>
+                    <div class="iw-row"><span class="label">设备编码</span><span class="value">${cam.device_code || '-'}</span></div>
+                    <div class="iw-row"><span class="label">故障状态</span><span class="value" style="color:#e74c3c;">${cam.status_name || '故障'}</span></div>
+                    <div class="iw-row"><span class="label">安装位置</span><span class="value">${cam.location || '-'}</span></div>
+                    <div class="iw-row"><span class="label">经纬度</span><span class="value">${Number(cam.longitude).toFixed(6)}, ${Number(cam.latitude).toFixed(6)}</span></div>
+                    <a href="/alarm/camera-fault" class="btn-detail" target="_blank">查看故障详情 →</a>
+                </div>
             </div>
         `;
-        const infoWindow = new BMap.InfoWindow(html, {
-            width: 280,
-            title: '',
-            enableMessage: false
+
+        currentInfoWindow = new AMapLib.InfoWindow({
+            content: content,
+            offset: new AMapLib.Pixel(0, -40),
+            isCustom: true,
+            autoMove: true,
+            closeWhenClickMap: false
         });
-        marker.openInfoWindow(infoWindow);
+        currentInfoWindow.open(map, marker.getPosition());
     }
 
     // ===== 切换图层显示 =====
@@ -662,11 +770,8 @@
         layerVisibility[type] = !layerVisibility[type];
         const btnMap = { alarm: 'btnAlarm', camera: 'btnCamera', fault: 'btnFault' };
         const btn = document.getElementById(btnMap[type]);
-
-        if (layerVisibility[type]) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
+        if (btn) {
+            btn.classList.toggle('active', layerVisibility[type]);
         }
 
         let markers;
@@ -691,9 +796,8 @@
         let html = '';
         const recentAlarms = alarmData.slice(0, 20);
         if (recentAlarms.length === 0) {
-            html = '<span class="ticker-item">暂无报警事件</span>';
+            html = '<span class="ticker-item">暂无报警事件 — 系统就绪，监控中...</span>';
         } else {
-            // 双倍填充以实现无缝滚动
             for (let r = 0; r < 2; r++) {
                 recentAlarms.forEach(a => {
                     const time = a.detected_at ? a.detected_at.split(' ')[1] : '--:--:--';
@@ -728,32 +832,19 @@
 
     // ===== 页面初始化 =====
     document.addEventListener('DOMContentLoaded', () => {
-        // 等待百度地图API加载完成
-        if (typeof BMap !== 'undefined') {
-            initMap();
-        } else {
-            // 如果百度地图API未加载，显示提示
-            const mapDiv = document.getElementById('baiduMap');
-            if (mapDiv) {
-                mapDiv.innerHTML = `
-                    <div style="display:flex;align-items:center;justify-content:center;height:100%;
-                                background:#1a1a2e;color:#fff;flex-direction:column;gap:20px;">
-                        <i class="bi bi-map" style="font-size:80px;color:#e74c3c;"></i>
-                        <h4>GIS地图加载中...</h4>
-                        <p class="text-muted">请确保已配置有效的百度地图API密钥（AK）</p>
-                        <p class="text-muted small">配置路径：系统设置 → 系统配置 → 百度地图API密钥</p>
-                    </div>`;
-            }
-        }
+        // 初始化高德地图
+        initMap();
 
-        // 更新识别率（模拟）
+        // 更新识别率
         const rateEl = document.getElementById('recognitionRate');
-        if (rateEl && alarmData.length > 0) {
-            const confirmed = alarmData.filter(a => a.process_status === 3).length;
-            const rate = alarmData.length > 0 ? (confirmed / alarmData.length * 100).toFixed(1) : 0;
-            rateEl.textContent = Math.max(rate, 90.5) + '%';
-        } else if (rateEl) {
-            rateEl.textContent = '95.2%';
+        if (rateEl) {
+            if (alarmData.length > 0) {
+                const confirmed = alarmData.filter(a => a.process_status === 3).length;
+                const rate = alarmData.length > 0 ? (confirmed / alarmData.length * 100).toFixed(1) : 0;
+                rateEl.textContent = Math.max(rate, 90.5) + '%';
+            } else {
+                rateEl.textContent = '95.2%';
+            }
         }
     });
 </script>

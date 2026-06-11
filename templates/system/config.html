@@ -75,13 +75,19 @@
                         </div>
                     </div>
                 </div>
-                <!-- 百度地图 -->
+                <!-- 高德地图配置 -->
                 <div class="config-section">
-                    <h6><i class="bi bi-map"></i> 百度地图配置</h6>
+                    <h6><i class="bi bi-map"></i> 高德地图配置</h6>
                     <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label-custom">百度地图API密钥（AK）</label>
-                            <input class="form-control" name="baidu_map_ak" placeholder="请输入百度地图AK密钥" value="{{ configs|selectattr('config_key','equalto','baidu_map_ak')|map(attribute='config_value')|first or '' }}">
+                        <div class="col-md-6">
+                            <label class="form-label-custom">高德地图Web端Key</label>
+                            <input class="form-control" name="amap_key" placeholder="从高德开放平台获取" value="{{ configs|selectattr('config_key','equalto','amap_key')|map(attribute='config_value')|first or '' }}">
+                            <div class="form-text-custom">申请地址：https://console.amap.com/</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">高德地图安全密钥</label>
+                            <input class="form-control" name="amap_security_code" placeholder="与Key配套的安全密钥" value="{{ configs|selectattr('config_key','equalto','amap_security_code')|map(attribute='config_value')|first or '' }}">
+                            <div class="form-text-custom">JSAPI v2.0 强制要求，需与Key配对使用</div>
                         </div>
                     </div>
                 </div>
