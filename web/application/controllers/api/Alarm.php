@@ -50,26 +50,32 @@ class Alarm extends REST_Controller {
     // ─────────────────────────────────
 
     public function create() {
-        // 边缘设备的请求可能不含 JWT Token，因此不强制鉴权
-        // 但用设备 MAC 校验（可选的增强方案）
-
+        // 边缘设备通过 HTTP POST JSON 上报，用设备 MAC 校验身份
         $raw = file_get_contents('php://input');
         $data = json_decode($raw, true);
         if (!$data || empty($data)) {
-            // 兼容 form-data 或 CI3 已消费 php://input
             $data = $this->input->post();
             if (!$data) {
                 $data = $_POST;
             }
         }
-
         if (empty($data)) {
             $this->error('缺少报警数据');
         }
-
-        // 必填字段校验
         if (empty($data['device_id'])) {
             $this->error('缺少设备ID（device_id）');
+        }
+
+        // 设备 MAC 校验（边缘设备接入必须验证身份）
+        if (empty($data['device_mac'])) {
+            $this->error('缺少设备MAC地址（device_mac）', $this->http_forbidden);
+        }
+        $device = $this->db->get_where('T_Device', array(
+            'Id' => $data['device_id'],
+            'MAC' => $data['device_mac']
+        ))->row();
+        if (!$device) {
+            $this->error('设备验证失败：device_id 与 MAC 不匹配', $this->http_forbidden);
         }
 
         $id = $this->Alarm_model->create($data);
@@ -136,22 +142,22 @@ class Alarm extends REST_Controller {
 
         switch ($action) {
             case 'process':
-                // 处理：人员操作后变为"待审核"
                 if ($event['Status'] != '1') {
                     $this->error('该事件当前状态不允许处理');
                 }
                 $this->Alarm_model->process($id, $this->current_user_id, $data);
                 $this->log_operate('处理报警事件#' . $id, $event, $data);
                 $this->success(null, '处理成功');
+                return; // explicit return: prevent fall-through
 
             case 'audit':
-                // 审核：管理员审核通过
                 if ($event['Status'] != '2') {
                     $this->error('该事件当前状态不允许审核');
                 }
                 $this->Alarm_model->audit($id, $this->current_user_id, $data);
                 $this->log_operate('审核报警事件#' . $id, $event, $data);
                 $this->success(null, '审核成功');
+                return;
 
             default:
                 $this->error('无效的操作类型，可选值：process / audit');

@@ -37,12 +37,13 @@ class Email_lib {
      */
     public function send_alarm_notify($event_id, $data) {
         // 从数据库获取管理员邮箱
+        require_once APPPATH . 'core/REST_Controller.php';
         $admins = $this->CI->db
             ->select('u.Email, u.Phone')
             ->from('T_User u')
             ->join('T_UserRole ur', 'u.Id = ur.UserId')
             ->join('T_Role r', 'ur.RoleId = r.Id')
-            ->where('r.Name', '超级管理员')
+            ->where('r.Name', REST_Controller::ROLE_ADMIN)
             ->where('u.Email IS NOT NULL')
             ->get()->result_array();
 

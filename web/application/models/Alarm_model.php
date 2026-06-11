@@ -160,10 +160,9 @@ class Alarm_model extends CI_Model {
      * 按时间维度统计（日/周/月/年）
      */
     public function stats_by_time($granularity = 'day', $start = null, $end = null) {
-        $format = 'day'   ? '%Y-%m-%d' : (
-                  'month' ? '%Y-%m'    : '%Y'
-        );
-        $this->db->select("DATE_FORMAT(CreatTime, '%Y-%m-%d') as time_label,
+        $format = ($granularity === 'month') ? '%Y-%m'    :
+                  ($granularity === 'year')  ? '%Y'       : '%Y-%m-%d';
+        $this->db->select("DATE_FORMAT(CreatTime, '$format') as time_label,
                            COUNT(*) as total,
                            SUM(CASE WHEN EventType='fire' THEN 1 ELSE 0 END) as fire_count,
                            SUM(CASE WHEN EventType='smoke' THEN 1 ELSE 0 END) as smoke_count");

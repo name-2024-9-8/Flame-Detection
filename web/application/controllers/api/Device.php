@@ -51,7 +51,7 @@ class Device extends REST_Controller {
     // ─────────────────────────────────
 
     public function create() {
-        $this->require_auth();
+        $this->require_admin();
         $this->log_access();
 
         $json = file_get_contents('php://input');
@@ -76,7 +76,7 @@ class Device extends REST_Controller {
     // ─────────────────────────────────
 
     public function update($id = 0) {
-        $this->require_auth();
+        $this->require_admin();
         $this->log_access();
 
         $json = file_get_contents('php://input');
@@ -99,7 +99,7 @@ class Device extends REST_Controller {
     // ─────────────────────────────────
 
     public function delete($id = 0) {
-        $this->require_auth();
+        $this->require_admin();
         $this->log_access();
 
         $type = $this->input->get('type', true) ?: 'device';

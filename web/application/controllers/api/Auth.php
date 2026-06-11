@@ -39,14 +39,14 @@ class Auth extends REST_Controller {
             $this->error('账号或密码错误');
         }
 
-        // 验证密码（兼容明文和 hash）
-        if (password_verify($password, $user->Password)) {
-            // hash 验证
-        } elseif ($password === $user->Password) {
-            // 旧明文密码 → 自动升级为 hash
-            $this->User_model->update_password($user->Id, $password);
-        } else {
+        // 验证密码
+        if (!password_verify($password, $user->Password)) {
             $this->error('账号或密码错误');
+        }
+
+        // 检查密码是否需要重新加密（旧hash算法升级）
+        if (password_needs_rehash($user->Password, PASSWORD_DEFAULT)) {
+            $this->User_model->update_password($user->Id, $password);
         }
 
         // 生成 Token

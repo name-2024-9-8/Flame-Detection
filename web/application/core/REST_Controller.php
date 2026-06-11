@@ -15,7 +15,11 @@ use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
 class REST_Controller extends CI_Controller {
 
-    // JWT 密钥
+    // ── 系统常量 ──
+    const ROLE_ADMIN = '超级管理员'; // 管理员角色名（与数据库种子一致）
+    const ROLE_USER  = '普通用户';
+
+    // JWT 密钥（生产环境应从环境变量读取）
     protected $jwt_key = 'vai2026_flame_jwt_secret_2026';
     // Token 有效期（秒），默认 24 小时
     protected $jwt_expire = 86400;
@@ -32,16 +36,33 @@ class REST_Controller extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
-        // 所有 API 请求均输出 JSON
         header('Content-Type: application/json; charset=UTF-8');
+        // CORS: 生产环境应改为具体域名，开发时允许所有
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type, Authorization');
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: DENY');
 
-        // 处理 OPTIONS 预检请求
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
             http_response_code(200);
             exit;
+        }
+    }
+
+    /**
+     * 验证当前用户是否为管理员角色
+     */
+    protected function require_admin() {
+        $this->require_auth();
+        $user = $this->db
+            ->select('r.Name as RoleName')
+            ->from('T_UserRole ur')
+            ->join('T_Role r', 'ur.RoleId = r.Id')
+            ->where('ur.UserId', $this->current_user_id)
+            ->get()->row();
+        if (!$user || $user->RoleName !== self::ROLE_ADMIN) {
+            $this->error('需要管理员权限', $this->http_forbidden);
         }
     }
 
