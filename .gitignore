@@ -216,3 +216,31 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ===== 本项目特例 =====
+# 训练数据 (太大, 319MB)
+data/smoke_dataset/
+data/raw_dataset/
+
+# 训练中间权重 (epoch*.pt ~20MB each)
+output/yolo_train/weights/epoch*.pt
+output/yolo_train/weights/last.pt
+
+# 预训练权重 (需自行下载)
+output/yolo11n.pt
+
+# 训练日志
+runs/
+
+# IDE
+.idea/
+
+# 本地配置 (含密码)
+edge_config.json
+
+# 日志 & 缓存
+output/logs/
+output/edge_cache/
+output/clips/
+logs/
+*.log
