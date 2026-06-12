@@ -89,6 +89,10 @@ $route['api/statistics/health']             = 'api/Statistics/health';
 $route['api/export/excel']                  = 'api/Export/excel';
 $route['api/export/word']                   = 'api/Export/word';
 
+// 日志查询（融合联调新增）
+$route['api/logs/access']                   = 'api/Log/access';
+$route['api/logs/operation']                = 'api/Log/operation';
+
 // WebService 数据交换
 $route['api/webservice/alarm']              = 'api/WebService/alarm';
 $route['api/webservice/device/(:num)']      = 'api/WebService/device/$1';

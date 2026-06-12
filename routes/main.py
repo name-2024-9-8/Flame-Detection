@@ -1,0 +1,295 @@
+"""
+=============================================================================
+主页面路由 — 融合模式（页面数据从B的PHP API获取，模板保持不变）
+作者：人员C（前端） + 人员B（后端API桥接）
+创建时间：2026-06-11
+修改时间：2026-06-12  融合：改为调用B的PHP API桥接层获取数据
+=============================================================================
+"""
+from flask import Blueprint, render_template, request, session, redirect, url_for
+from routes.auth import login_required, admin_required, get_current_user
+from datetime import datetime, timedelta
+import json
+
+main_bp = Blueprint('main', __name__)
+
+
+# =========================================================================
+# 辅助函数：获取桥接实例
+# =========================================================================
+
+def _get_bridge():
+    """获取API桥接实例"""
+    from api_bridge import APIBridge
+    jwt = session.get('jwt_token', '')
+    if jwt and not APIBridge.get_token():
+        APIBridge.set_token(jwt)
+    return APIBridge
+
+
+def _success_or_empty(result, key='data'):
+    """从桥接结果中提取数据，失败返回空"""
+    if result and result.get('code') == 200:
+        return result.get(key, {})
+    return {}
+
+
+def _list_items(result):
+    """从桥接结果中提取列表项"""
+    data = _success_or_empty(result)
+    return data.get('items', []) if isinstance(data, dict) else []
+
+
+# =========================================================================
+# 上下文处理器 — 注入全局变量到模板
+# =========================================================================
+
+@main_bp.context_processor
+def inject_globals():
+    user = get_current_user()
+    return {
+        'current_user': user,
+        'site_name': '视频AI智能识别及预警管理信息系统',
+        'logo_text': 'AI火焰识别预警',
+        'current_year': datetime.now().year,
+    }
+
+
+# =========================================================================
+# 首页 — GIS数据大屏 ★ 核心页面
+# =========================================================================
+
+@main_bp.route('/')
+@login_required
+def index():
+    """首页 — GIS地图数据大屏"""
+    user = get_current_user()
+    bridge = _get_bridge()
+
+    # 统计概览
+    overview = _success_or_empty(bridge.statistics_overview())
+
+    total_cameras = overview.get('total_cameras', 0)
+    online_cameras = overview.get('online_cameras', 0)
+    fault_cameras = overview.get('fault_cameras', 0)
+    total_cloud_boxes = overview.get('total_cloud_boxes', 0)
+    online_cloud_boxes = overview.get('online_cloud_boxes', 0)
+    total_alarms = overview.get('total_alarms', 0)
+    pending_alarms = overview.get('pending_alarms', 0)
+    today_alarms = overview.get('today_alarms', 0)
+
+    # 摄像头列表（地图标注）
+    camera_list = _list_items(bridge.camera_list(per_page=500))
+
+    # 报警事件列表（最近50条，地图弹窗）
+    alarm_list = _list_items(bridge.alarm_list(per_page=50))
+
+    # 故障摄像头（暂无）
+    fault_camera_data = []
+
+    # 最近7天报警趋势
+    alarm_by_date = _success_or_empty(bridge.statistics_by_date(days=7)) or []
+    if isinstance(alarm_by_date, list):
+        alarm_by_date = [{'date': d.get('date', ''), 'count': d.get('count', 0)} for d in alarm_by_date]
+
+    # 按区域统计报警
+    region_data = _success_or_empty(bridge.statistics_by_region()) or []
+    if isinstance(region_data, list):
+        region_data = [{'name': r.get('name', '未知'), 'value': r.get('value', 0)} for r in region_data]
+
+    return render_template(
+        'index.html',
+        total_cameras=total_cameras,
+        online_cameras=online_cameras,
+        fault_cameras=fault_cameras,
+        total_cloud_boxes=total_cloud_boxes,
+        online_cloud_boxes=online_cloud_boxes,
+        total_alarms=total_alarms,
+        pending_alarms=pending_alarms,
+        today_alarms=today_alarms,
+        camera_list_json=json.dumps(camera_list, ensure_ascii=False),
+        alarm_list_json=json.dumps(alarm_list, ensure_ascii=False),
+        fault_camera_json=json.dumps(fault_camera_data, ensure_ascii=False),
+        alarm_by_date_json=json.dumps(alarm_by_date, ensure_ascii=False),
+        region_data_json=json.dumps(region_data, ensure_ascii=False),
+        user=user,
+    )
+
+
+# =========================================================================
+# 管理后台仪表盘
+# =========================================================================
+
+@main_bp.route('/dashboard')
+@login_required
+def dashboard():
+    """管理后台仪表盘"""
+    user = get_current_user()
+    bridge = _get_bridge()
+
+    # 核心统计数据
+    overview = _success_or_empty(bridge.statistics_overview())
+    total_cameras = overview.get('total_cameras', 0)
+    online_cameras = overview.get('online_cameras', 0)
+    total_cloud_boxes = overview.get('total_cloud_boxes', 0)
+    total_alarms = overview.get('total_alarms', 0)
+    pending_alarms = overview.get('pending_alarms', 0)
+
+    # 本周报警趋势 (7天)
+    week_alarms = _success_or_empty(bridge.statistics_by_date(days=7)) or []
+    if isinstance(week_alarms, list):
+        week_alarms = [{'date': d.get('date', ''), 'count': d.get('count', 0)} for d in week_alarms]
+
+    # 本月报警趋势 (30天)
+    month_alarms = _success_or_empty(bridge.statistics_by_date(days=30)) or []
+    if isinstance(month_alarms, list):
+        month_alarms = [{'date': d.get('date', ''), 'count': d.get('count', 0)} for d in month_alarms]
+
+    # 按区域统计
+    region_data = _success_or_empty(bridge.statistics_by_region()) or []
+    if isinstance(region_data, list):
+        region_data = [{'name': r.get('name', '未知'), 'value': r.get('value', 0)} for r in region_data]
+
+    # 按级别统计
+    level_data = _success_or_empty(bridge.statistics_by_level()) or []
+    if isinstance(level_data, list):
+        level_data = [{'name': l.get('name', '未知'), 'value': l.get('value', 0)} for l in level_data]
+
+    # 设备在线率
+    device_online_rate = round(online_cameras / total_cameras * 100, 1) if total_cameras > 0 else 0
+
+    # 最近报警事件（10条）
+    recent_events = _list_items(bridge.alarm_list(per_page=10))
+
+    return render_template(
+        'dashboard.html',
+        total_cameras=total_cameras,
+        online_cameras=online_cameras,
+        total_cloud_boxes=total_cloud_boxes,
+        total_alarms=total_alarms,
+        pending_alarms=pending_alarms,
+        device_online_rate=device_online_rate,
+        week_alarms_json=json.dumps(week_alarms, ensure_ascii=False),
+        month_alarms_json=json.dumps(month_alarms, ensure_ascii=False),
+        region_data_json=json.dumps(region_data, ensure_ascii=False),
+        level_data_json=json.dumps(level_data, ensure_ascii=False),
+        recent_events=recent_events,
+        user=user,
+    )
+
+
+# =========================================================================
+# 系统设置模块
+# =========================================================================
+
+@main_bp.route('/system/config')
+@login_required
+@admin_required
+def system_config():
+    """系统配置页面 — 数据由AJAX加载"""
+    bridge = _get_bridge()
+    configs_data = _success_or_empty(bridge.system_configs())
+    configs = configs_data if isinstance(configs_data, list) else []
+    return render_template('system/config.html', configs=configs)
+
+
+@main_bp.route('/system/department')
+@login_required
+@admin_required
+def department():
+    """部门管理页面"""
+    return render_template('system/department.html', departments=[])
+
+
+@main_bp.route('/system/user')
+@login_required
+@admin_required
+def user_management():
+    """用户管理页面"""
+    return render_template('system/user.html', users=[], departments=[], roles=[])
+
+
+@main_bp.route('/system/role')
+@login_required
+@admin_required
+def role_management():
+    """角色管理页面"""
+    return render_template('system/role.html', roles=[])
+
+
+@main_bp.route('/system/datadict')
+@login_required
+@admin_required
+def datadict():
+    """数据字典页面"""
+    return render_template('system/datadict.html', dicts=[], dict_types=[])
+
+
+# =========================================================================
+# 设备管理模块
+# =========================================================================
+
+@main_bp.route('/device/cloudbox')
+@login_required
+def cloudbox():
+    """AI智能云盒管理页面 — 数据由AJAX加载"""
+    return render_template('device/cloudbox.html', cloud_boxes=[])
+
+
+@main_bp.route('/device/camera')
+@login_required
+def camera_management():
+    """摄像头管理页面 — 数据由AJAX加载"""
+    return render_template('device/camera.html', cameras=[], cloud_boxes=[])
+
+
+# =========================================================================
+# 报警事件管理模块
+# =========================================================================
+
+@main_bp.route('/alarm/event')
+@login_required
+def alarm_event():
+    """报警事件管理页面 — 数据由AJAX加载"""
+    return render_template('alarm/event.html', events=[])
+
+
+@main_bp.route('/alarm/review')
+@login_required
+def alarm_review():
+    """事件处理审核页面 — 数据由AJAX加载"""
+    return render_template('alarm/review.html', events=[])
+
+
+@main_bp.route('/alarm/camera-fault')
+@login_required
+def camera_fault():
+    """摄像头故障页面"""
+    fault_stats = {'today': 0, 'week': 0, 'month': 0, 'year': 0}
+    return render_template('alarm/camera_fault.html', faults=[], fault_stats=fault_stats)
+
+
+@main_bp.route('/alarm/cloudbox-fault')
+@login_required
+def cloudbox_fault():
+    """AI云盒故障页面"""
+    fault_stats = {'today': 0, 'week': 0, 'month': 0, 'year': 0}
+    return render_template('alarm/cloudbox_fault.html', faults=[], fault_stats=fault_stats)
+
+
+# =========================================================================
+# 日志管理模块
+# =========================================================================
+
+@main_bp.route('/log/access')
+@login_required
+def access_log():
+    """访问日志页面"""
+    return render_template('log/access.html', logs=[])
+
+
+@main_bp.route('/log/operation')
+@login_required
+def operation_log():
+    """操作日志页面"""
+    return render_template('log/operation.html', logs=[])

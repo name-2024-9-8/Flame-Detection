@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}AI云盒故障 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>.page-container{padding:20px;background:#f5f6fa;min-height:calc(100vh - 100px)}.card-custom{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.stat-mini{text-align:center;padding:15px;background:#f8f9fa;border-radius:10px}.stat-mini .num{font-size:28px;font-weight:800;color:#1a1a2e}.stat-mini .lbl{font-size:12px;color:#888}.table th{background:#f8f9fa;font-size:13px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #e74c3c}</style>{% endblock %}
+{% block content %}
+<div class="page-container"><div class="container-fluid"><div class="card-custom">
+<h4 class="fw-bold mb-3"><i class="bi bi-box-arrow-down me-2"></i>AI云盒故障管理</h4>
+<div class="row g-3 mb-4">
+<div class="col-md-3"><div class="stat-mini"><div class="num" style="color:#e74c3c">{{ fault_stats.today }}</div><div class="lbl">今日故障</div></div></div>
+<div class="col-md-3"><div class="stat-mini"><div class="num" style="color:#f39c12">{{ fault_stats.week }}</div><div class="lbl">本周故障</div></div></div>
+<div class="col-md-3"><div class="stat-mini"><div class="num" style="color:#3498db">{{ fault_stats.month }}</div><div class="lbl">本月故障</div></div></div>
+<div class="col-md-3"><div class="stat-mini"><div class="num" style="color:#2ecc71">{{ fault_stats.year }}</div><div class="lbl">年度故障</div></div></div>
+</div>
+<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>ID</th><th>故障编号</th><th>AI云盒</th><th>故障类型</th><th>描述</th><th>级别</th><th>状态</th><th>发生时间</th><th>操作</th></tr></thead>
+<tbody>{% for f in faults %}<tr><td>{{ f.id }}</td><td><code>{{ f.fault_code }}</code></td><td>{{ f.cloud_box.device_name if f.cloud_box else '-' }}</td><td><span class="badge bg-info">{{ f.fault_type_name }}</span></td><td>{{ f.fault_description or '-' }}</td><td><span class="badge bg-{{ 'danger' if f.fault_level==1 else 'warning' if f.fault_level==2 else 'info' }}">{{ {1:'严重',2:'一般',3:'轻微'}.get(f.fault_level,'-') }}</span></td><td><span class="badge bg-{{ 'warning' if f.process_status==1 else 'info' if f.process_status==2 else 'success' if f.process_status==3 else 'secondary' }}">{{ {1:'待处理',2:'处理中',3:'已修复',4:'已关闭'}.get(f.process_status,'-') }}</span></td><td>{{ f.occurred_at|datetime_format if f.occurred_at else '-' }}</td><td>{% if f.process_status in [1,2] %}<button class="btn btn-success btn-sm" onclick="repairFault({{ f.id }})"><i class="bi bi-tools"></i> 修复</button>{% else %}<span class="text-muted">-</span>{% endif %}</td></tr>{% else %}<tr><td colspan="9" class="text-center py-4 text-muted">暂无故障记录</td></tr>{% endfor %}</tbody></table></div>
+</div></div></div>
+<div class="modal fade" id="repairModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-success text-white"><h6 class="modal-title"><i class="bi bi-tools me-1"></i>修复故障</h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="repairFaultId"><div class="mb-3"><label class="form-label">修复描述</label><textarea class="form-control" id="repairDesc" rows="3" placeholder="请描述修复过程..."></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-success" onclick="confirmRepair()">确认修复</button></div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function repairFault(id){$('#repairFaultId').val(id);$('#repairDesc').val('');$('#repairModal').modal('show');}
+function confirmRepair(){let id=$('#repairFaultId').val(),desc=$('#repairDesc').val();$.ajax({url:'/api/v1/cloudbox-faults/'+id+'/repair',method:'PUT',contentType:'application/json',data:JSON.stringify({repair_description:desc}),success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});}
+</script>
+{% endblock %}

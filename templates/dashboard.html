@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}管理仪表盘 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>
+    .dashboard-container { padding: 20px; background: #f5f6fa; min-height: calc(100vh - 100px); }
+    .stat-card-db {
+        background: #fff; border-radius: 14px; padding: 22px 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; align-items: center;
+        gap: 18px; transition: all 0.3s; cursor: default; border-left: 4px solid transparent;
+    }
+    .stat-card-db:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .stat-card-db.fire { border-left-color: #e74c3c; }
+    .stat-card-db.camera { border-left-color: #3498db; }
+    .stat-card-db.box { border-left-color: #2ecc71; }
+    .stat-card-db.rate { border-left-color: #f39c12; }
+    .stat-icon-db {
+        width: 56px; height: 56px; border-radius: 14px; display: flex;
+        align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0;
+    }
+    .stat-icon-db.fire-bg { background: linear-gradient(135deg, #fde8e8, #fadbd8); color: #e74c3c; }
+    .stat-icon-db.camera-bg { background: linear-gradient(135deg, #e8f4fd, #d4e6f1); color: #3498db; }
+    .stat-icon-db.box-bg { background: linear-gradient(135deg, #e8faf0, #d5f5e3); color: #2ecc71; }
+    .stat-icon-db.rate-bg { background: linear-gradient(135deg, #fef5e7, #fdebd0); color: #f39c12; }
+    .stat-value-db { font-size: 32px; font-weight: 800; color: #1a1a2e; line-height: 1; margin-bottom: 4px; }
+    .stat-label-db { font-size: 13px; color: #888; }
+    .chart-card {
+        background: #fff; border-radius: 14px; padding: 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+    }
+    .chart-card h5 { font-size: 16px; font-weight: 700; color: #1a1a2e; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; }
+    .chart-box { width: 100%; height: 350px; }
+    .event-list { max-height: 400px; overflow-y: auto; }
+    .event-list .list-group-item { border-left: none; border-right: none; padding: 12px 16px; transition: background 0.2s; }
+    .event-list .list-group-item:hover { background: #f8f9fa; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="container-fluid">
+        <h4 class="mb-3 fw-bold"><i class="bi bi-speedometer2 me-2"></i>管理仪表盘</h4>
+
+        <!-- 统计卡片 -->
+        <div class="row g-3 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card-db fire">
+                    <div class="stat-icon-db fire-bg"><i class="bi bi-fire"></i></div>
+                    <div>
+                        <div class="stat-value-db">{{ total_alarms }}</div>
+                        <div class="stat-label-db">累计报警事件</div>
+                        <small class="text-danger">待处理: {{ pending_alarms }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card-db camera">
+                    <div class="stat-icon-db camera-bg"><i class="bi bi-camera-video"></i></div>
+                    <div>
+                        <div class="stat-value-db">{{ total_cameras }}</div>
+                        <div class="stat-label-db">监控摄像头</div>
+                        <small class="text-primary">在线: {{ online_cameras }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card-db box">
+                    <div class="stat-icon-db box-bg"><i class="bi bi-cpu"></i></div>
+                    <div>
+                        <div class="stat-value-db">{{ total_cloud_boxes }}</div>
+                        <div class="stat-label-db">AI智能云盒</div>
+                        <small class="text-success">在线率: {{ device_online_rate }}%</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card-db rate">
+                    <div class="stat-icon-db rate-bg"><i class="bi bi-graph-up"></i></div>
+                    <div>
+                        <div class="stat-value-db">{{ device_online_rate }}%</div>
+                        <div class="stat-label-db">设备在线率</div>
+                        <small class="text-warning">目标 ≥90%</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="row g-3 mb-4">
+            <!-- 本周报警趋势 -->
+            <div class="col-lg-8">
+                <div class="chart-card">
+                    <h5><i class="bi bi-graph-up-arrow me-2"></i>报警事件趋势（近30天）</h5>
+                    <div class="chart-box" id="chartMonthTrend"></div>
+                </div>
+            </div>
+            <!-- 报警级别分布 -->
+            <div class="col-lg-4">
+                <div class="chart-card">
+                    <h5><i class="bi bi-pie-chart me-2"></i>报警级别分布</h5>
+                    <div class="chart-box" id="chartLevelPie"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <!-- 区域报警统计 -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h5><i class="bi bi-geo-alt me-2"></i>区域报警统计（TOP10）</h5>
+                    <div class="chart-box" id="chartRegionBar"></div>
+                </div>
+            </div>
+            <!-- 最近报警事件 -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h5><i class="bi bi-clock-history me-2"></i>最近报警事件</h5>
+                    <div class="event-list">
+                        {% if recent_events %}
+                        <div class="list-group list-group-flush">
+                            {% for event in recent_events %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="me-2">{{ event.event_type_name | safe }}</span>
+                                    <span class="me-2">{{ event.alarm_level_name | safe }}</span>
+                                    <small class="text-muted">{{ event.event_code }}</small>
+                                </div>
+                                <div>
+                                    <small class="text-muted me-2">{{ event.location_description or '未知位置' }}</small>
+                                    <span>{{ event.process_status_name | safe }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-4">暂无报警事件</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 近30天报警趋势图
+    const monthData = {{ month_alarms_json | safe }};
+    const monthChart = echarts.init(document.getElementById('chartMonthTrend'));
+    monthChart.setOption({
+        tooltip: { trigger: 'axis', backgroundColor: 'rgba(26,26,46,0.9)', borderColor: '#333', textStyle: { color: '#fff' } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: monthData.map(d => d.date), axisLine: { lineStyle: { color: '#ddd' } }, axisLabel: { rotate: 45, fontSize: 10 } },
+        yAxis: { type: 'value', name: '报警数', axisLine: { lineStyle: { color: '#ddd' } }, splitLine: { lineStyle: { color: '#f0f0f0' } } },
+        series: [{
+            name: '报警数量', type: 'line', data: monthData.map(d => d.count),
+            smooth: true, symbol: 'circle', symbolSize: 6,
+            lineStyle: { color: '#e74c3c', width: 2 },
+            itemStyle: { color: '#e74c3c' },
+            areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [
+                { offset: 0, color: 'rgba(231,76,60,0.3)' },
+                { offset: 1, color: 'rgba(231,76,60,0.02)' }
+            ])}
+        }]
+    });
+
+    // 报警级别饼图
+    const levelData = {{ level_data_json | safe }};
+    const levelChart = echarts.init(document.getElementById('chartLevelPie'));
+    levelChart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+        legend: { bottom: '0%', textStyle: { fontSize: 12 } },
+        series: [{
+            type: 'pie', radius: ['45%', '75%'], center: ['50%', '45%'],
+            data: levelData,
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+            itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+            label: { formatter: '{b}\n{d}%' }
+        }],
+        color: ['#e74c3c', '#f39c12', '#3498db', '#95a5a6']
+    });
+
+    // 区域报警柱状图
+    const regionData = {{ region_data_json | safe }};
+    const regionChart = echarts.init(document.getElementById('chartRegionBar'));
+    regionChart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: regionData.map(d => d.name), axisLabel: { rotate: 30, fontSize: 10 } },
+        yAxis: { type: 'value', name: '报警数' },
+        series: [{
+            type: 'bar', data: regionData.map(d => d.value),
+            itemStyle: { borderRadius: [6,6,0,0], color: new echarts.graphic.LinearGradient(0,0,0,1, [
+                { offset: 0, color: '#e74c3c' }, { offset: 1, color: '#f39c12' }
+            ])},
+            barMaxWidth: 40
+        }]
+    });
+
+    // 响应式重绘
+    window.addEventListener('resize', () => {
+        monthChart.resize();
+        levelChart.resize();
+        regionChart.resize();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}访问日志 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>.page-container{padding:20px;background:#f5f6fa;min-height:calc(100vh - 100px)}.card-custom{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.table th{background:#f8f9fa;font-size:13px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #e74c3c}</style>{% endblock %}
+{% block content %}
+<div class="page-container"><div class="container-fluid"><div class="card-custom">
+<h4 class="fw-bold mb-3"><i class="bi bi-eye me-2"></i>访问日志</h4>
+<div class="row mb-3"><div class="col-md-3"><input class="form-control form-control-sm" placeholder="搜索用户名" id="fUsername"></div><div class="col-md-2"><button class="btn btn-outline-secondary btn-sm" onclick="loadLogs()"><i class="bi bi-search"></i> 筛选</button></div></div>
+<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>ID</th><th>用户</th><th>IP地址</th><th>请求方法</th><th>请求URL</th><th>状态码</th><th>耗时(ms)</th><th>访问时间</th></tr></thead><tbody id="logTableBody"></tbody></table></div>
+<div class="d-flex justify-content-between mt-3"><small class="text-muted" id="logPageInfo"></small><div class="btn-group btn-group-sm" id="logPagination"></div></div>
+</div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let logPage=1;
+$(function(){loadLogs();});
+function loadLogs(page=1){logPage=page;let params={page,per_page:20,username:$('#fUsername').val()};if(!params.username)delete params.username;$.get('/api/v1/logs/access',params,function(res){if(res.code===200){let rows=res.data.items.map(function(l){var un=escHtml(l.username),ip=escHtml(l.ip_address),rm=escHtml(l.request_method),ru=escHtml(l.request_url),ct=escHtml(l.created_at),rc=l.response_code||200,bc=rc<400?'success':rc<500?'warning':'danger';return'<tr><td>'+l.id+'</td><td>'+un+'</td><td>'+ip+'</td><td><span class="badge bg-primary">'+rm+'</span></td><td><small>'+ru+'</small></td><td><span class="badge bg-'+bc+'">'+rc+'</span></td><td>'+(l.duration_ms||'-')+'</td><td>'+ct+'</td></tr>';}).join('');$('#logTableBody').html(rows||'<tr><td colspan="8" class="text-center py-4 text-muted">暂无记录</td></tr>');$('#logPageInfo').text('共 '+res.data.total+' 条');var ph='';for(var i=1;i<=res.data.pages;i++)ph+='<button class="btn btn-'+(i===res.data.page?'danger':'outline-secondary')+'" onclick="loadLogs('+i+')">'+i+'</button>';$('#logPagination').html(ph);}});}
+</script>
+{% endblock %}
