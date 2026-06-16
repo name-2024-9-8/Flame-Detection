@@ -21,7 +21,7 @@ class CameraError_model extends CI_Model {
      * 分页查询故障列表
      */
     public function get_list($page = 1, $per_page = 20, $filters = array()) {
-        $this->db->select('ce.*, c.Name as CameraName, c.IP as CameraIP');
+        $this->db->select('ce.*, c.Name as CameraName, c.IP as CameraIP, c.Longitude, c.Latitude, c.DeviceId as CloudBoxId');
         $this->db->from('T_CameraError ce');
         $this->db->join('T_Camera c', 'ce.CameraId = c.Id', 'left');
 

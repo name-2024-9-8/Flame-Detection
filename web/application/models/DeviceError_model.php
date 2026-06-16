@@ -21,7 +21,7 @@ class DeviceError_model extends CI_Model {
      * 分页查询故障列表
      */
     public function get_list($page = 1, $per_page = 20, $filters = array()) {
-        $this->db->select('de.*, d.Address as DeviceAddress, d.MAC as DeviceMAC');
+        $this->db->select('de.*, d.Address as DeviceAddress, d.MAC as DeviceMAC, d.Longitude, d.Latitude');
         $this->db->from('T_DeviceError de');
         $this->db->join('T_Device d', 'de.DeviceId = d.Id', 'left');
 
@@ -44,7 +44,7 @@ class DeviceError_model extends CI_Model {
      * 单条详情
      */
     public function get_detail($id) {
-        $this->db->select('de.*, d.Address as DeviceAddress, d.MAC as DeviceMAC');
+        $this->db->select('de.*, d.Address as DeviceAddress, d.MAC as DeviceMAC, d.Longitude, d.Latitude');
         $this->db->from('T_DeviceError de');
         $this->db->join('T_Device d', 'de.DeviceId = d.Id', 'left');
         $this->db->where('de.Id', $id);

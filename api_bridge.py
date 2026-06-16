@@ -388,23 +388,39 @@ class APIBridge:
 
     @classmethod
     def statistics_overview(cls):
-        """概览统计（聚合多个API）"""
+        """概览统计（聚合多个API — 真实故障数据）"""
         summary_result = cls._get('statistics', params={'dimension': 'summary'})
         devices_result = cls._get('devices', params={'per_page': 1})
         cameras_result = cls._get('devices', params={'type': 'camera', 'per_page': 1})
         alarms_result = cls._get('alarm/events', params={'per_page': 1})
+        # ★ 获取真实故障数
+        cam_fault_result = cls._get('faults/camera', params={'per_page': 1})
+        box_fault_result = cls._get('faults/device', params={'per_page': 1})
+
+        total_cameras = cameras_result.get('data', {}).get('total', 0)
+        total_boxes = devices_result.get('data', {}).get('total', 0)
+        fault_cameras = cam_fault_result.get('data', {}).get('total', 0) if cam_fault_result.get('code') == 200 else 0
+        fault_boxes = box_fault_result.get('data', {}).get('total', 0) if box_fault_result.get('code') == 200 else 0
+        total_alarms = alarms_result.get('data', {}).get('total', 0)
+        pending_alarms = summary_result.get('data', {}).get('pending_count', 0) if summary_result.get('code') == 200 else 0
+
+        # 今日告警 = 当日故障数（camera + device）
+        cam_stats = cam_fault_result.get('data', {}).get('stats', {}) if cam_fault_result.get('code') == 200 else {}
+        box_stats = box_fault_result.get('data', {}).get('stats', {}) if box_fault_result.get('code') == 200 else {}
+        today_alarms = cam_stats.get('today', 0) + box_stats.get('today', 0)
 
         return {
             'code': 200, 'msg': 'success',
             'data': {
-                'total_cameras': cameras_result.get('data', {}).get('total', 0),
-                'online_cameras': cameras_result.get('data', {}).get('total', 0),
-                'fault_cameras': 0,
-                'total_cloud_boxes': devices_result.get('data', {}).get('total', 0),
-                'online_cloud_boxes': devices_result.get('data', {}).get('total', 0),
-                'total_alarms': alarms_result.get('data', {}).get('total', 0),
-                'pending_alarms': summary_result.get('data', {}).get('pending_count', 0) if summary_result.get('code') == 200 else 0,
-                'today_alarms': 0,
+                'total_cameras': total_cameras,
+                'online_cameras': max(0, total_cameras - fault_cameras),
+                'fault_cameras': fault_cameras,
+                'total_cloud_boxes': total_boxes,
+                'online_cloud_boxes': max(0, total_boxes - fault_boxes),
+                'fault_cloud_boxes': fault_boxes,
+                'total_alarms': total_alarms,
+                'pending_alarms': pending_alarms,
+                'today_alarms': today_alarms,
                 'month_alarms': 0,
             }
         }
@@ -1000,6 +1016,13 @@ class APIBridge:
                     'fault_level': 1,
                     'process_status': 1,
                     'occurred_at': item.get('CreateTime', ''),
+                    # 数据大屏地图用
+                    'device_name': item.get('CameraName', ''),
+                    'device_code': item.get('CameraIP', ''),
+                    'longitude': item.get('Longitude'),
+                    'latitude': item.get('Latitude'),
+                    'location': item.get('CameraName', ''),
+                    'status_name': '故障',
                 })
             total = data.get('total', 0)
             stats = data.get('stats', {})
@@ -1040,6 +1063,13 @@ class APIBridge:
                     'fault_level': 1,
                     'process_status': 1,
                     'occurred_at': item.get('CreateTime', ''),
+                    # 数据大屏地图用
+                    'device_name': item.get('DeviceAddress', ''),
+                    'device_code': item.get('DeviceMAC', ''),
+                    'longitude': item.get('Longitude'),
+                    'latitude': item.get('Latitude'),
+                    'location': item.get('DeviceAddress', ''),
+                    'status_name': '故障',
                 })
             total = data.get('total', 0)
             stats = data.get('stats', {})

@@ -354,7 +354,8 @@
             <div class="stat-value">{{ total_cloud_boxes }}</div>
             <div class="stat-label">AI智能云盒</div>
             <div class="stat-sub">
-                在线 <span class="up">{{ online_cloud_boxes }}</span>
+                在线 <span class="up">{{ online_cloud_boxes }}</span> ·
+                故障 <span class="down">{{ fault_cloud_boxes }}</span>
             </div>
         </div>
     </div>
@@ -736,21 +737,27 @@
     // ===== 故障信息窗口 =====
     function showFaultInfoWindow(marker) {
         if (currentInfoWindow) { currentInfoWindow.close(); }
-        const cam = marker.getExtData();
-        if (!cam) return;
+        const f = marker.getExtData();
+        if (!f) return;
+
+        const isBox = f.fault_code && f.fault_code.startsWith('DEV-ERR');
+        const faultTitle = isBox ? '故障AI云盒' : '故障摄像头';
+        const detailUrl = isBox ? '/alarm/cloudbox-fault' : '/alarm/camera-fault';
+        const faultType = f.fault_type_name || '未知故障';
 
         const content = `
             <div class="amap-info-window">
                 <div class="iw-header">
-                    <span>⚠</span> 故障摄像头
+                    <span>⚠</span> ${faultTitle}
                 </div>
                 <div class="iw-body">
-                    <div class="iw-row"><span class="label">设备名称</span><span class="value">${cam.device_name || '-'}</span></div>
-                    <div class="iw-row"><span class="label">设备编码</span><span class="value">${cam.device_code || '-'}</span></div>
-                    <div class="iw-row"><span class="label">故障状态</span><span class="value" style="color:#e74c3c;">${cam.status_name || '故障'}</span></div>
-                    <div class="iw-row"><span class="label">安装位置</span><span class="value">${cam.location || '-'}</span></div>
-                    <div class="iw-row"><span class="label">经纬度</span><span class="value">${Number(cam.longitude).toFixed(6)}, ${Number(cam.latitude).toFixed(6)}</span></div>
-                    <a href="/alarm/camera-fault" class="btn-detail" target="_blank">查看故障详情 →</a>
+                    <div class="iw-row"><span class="label">设备名称</span><span class="value">${f.device_name || '-'}</span></div>
+                    <div class="iw-row"><span class="label">故障类型</span><span class="value" style="color:#e74c3c;">${faultType}</span></div>
+                    <div class="iw-row"><span class="label">故障编码</span><span class="value">${f.fault_code || '-'}</span></div>
+                    <div class="iw-row"><span class="label">故障描述</span><span class="value">${f.fault_description || '-'}</span></div>
+                    <div class="iw-row"><span class="label">发生时间</span><span class="value">${f.occurred_at || '-'}</span></div>
+                    ${f.longitude && f.latitude ? `<div class="iw-row"><span class="label">经纬度</span><span class="value">${Number(f.longitude).toFixed(6)}, ${Number(f.latitude).toFixed(6)}</span></div>` : ''}
+                    <a href="${detailUrl}" class="btn-detail" target="_blank">查看故障详情 →</a>
                 </div>
             </div>
         `;

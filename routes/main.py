@@ -92,6 +92,7 @@ def index():
     fault_cameras = overview.get('fault_cameras', 0)
     total_cloud_boxes = overview.get('total_cloud_boxes', 0)
     online_cloud_boxes = overview.get('online_cloud_boxes', 0)
+    fault_cloud_boxes = overview.get('fault_cloud_boxes', 0)
     total_alarms = overview.get('total_alarms', 0)
     pending_alarms = overview.get('pending_alarms', 0)
     today_alarms = overview.get('today_alarms', 0)
@@ -102,8 +103,11 @@ def index():
     # 报警事件列表（最近50条，地图弹窗）
     alarm_list = _list_items(bridge.alarm_list(per_page=50))
 
-    # 故障摄像头（暂无）
-    fault_camera_data = []
+    # 故障摄像头（数据大屏地图标注）
+    cam_faults = _list_items(bridge.camera_fault_list(per_page=200))
+    box_faults = _list_items(bridge.cloudbox_fault_list(per_page=200))
+    # 合并两种故障数据，统一传给大屏
+    fault_data = cam_faults + box_faults
 
     # 最近7天报警趋势
     alarm_by_date = _success_or_empty(bridge.statistics_by_date(days=7)) or []
@@ -122,12 +126,13 @@ def index():
         fault_cameras=fault_cameras,
         total_cloud_boxes=total_cloud_boxes,
         online_cloud_boxes=online_cloud_boxes,
+        fault_cloud_boxes=fault_cloud_boxes,
         total_alarms=total_alarms,
         pending_alarms=pending_alarms,
         today_alarms=today_alarms,
         camera_list_json=json.dumps(camera_list, ensure_ascii=False),
         alarm_list_json=json.dumps(alarm_list, ensure_ascii=False),
-        fault_camera_json=json.dumps(fault_camera_data, ensure_ascii=False),
+        fault_camera_json=json.dumps(fault_data, ensure_ascii=False),
         alarm_by_date_json=json.dumps(alarm_by_date, ensure_ascii=False),
         region_data_json=json.dumps(region_data, ensure_ascii=False),
         user=user,
