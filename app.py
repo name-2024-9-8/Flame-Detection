@@ -23,6 +23,15 @@ def create_app(config_name=None):
     app = Flask(__name__, static_folder='static', template_folder='templates')
     app.config.from_object(config_dict.get(config_name, config_dict['default']))
 
+    # 开发环境：EDGE_API_KEY 未设置时使用开发密钥（生产环境必须通过环境变量设置）
+    if not app.config.get('EDGE_API_KEY'):
+        if app.config.get('DEBUG'):
+            app.config['EDGE_API_KEY'] = 'flame-edge-dev-key-2026'
+            print("[DEV] EDGE_API_KEY 未设置，使用开发默认密钥: flame-edge-dev-key-2026")
+        else:
+            print("[WARNING] EDGE_API_KEY 未设置！边缘设备API将拒绝所有请求。")
+            print("          请设置环境变量: set EDGE_API_KEY=<your-secure-key>")
+
     # 确保上传目录存在
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'static/uploads'), exist_ok=True)
 

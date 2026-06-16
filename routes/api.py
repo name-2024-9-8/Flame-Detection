@@ -63,105 +63,135 @@ def get_token():
 
 
 # =========================================================================
-# 部门管理API（B端暂无专题API → 待扩展）
+# 部门管理API（M7融合修复）
 # =========================================================================
 
 @api_bp.route('/departments', methods=['GET'])
 @login_required
 def get_departments():
-    return success([], '部门列表（B端待扩展）')
+    bridge = _get_bridge()
+    return jsonify(bridge.department_list())
 
 
 @api_bp.route('/departments', methods=['POST'])
 @login_required
 @admin_required
 def create_department():
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get('name'):
+        return fail('部门名称不能为空')
+    bridge = _get_bridge()
+    return jsonify(bridge.department_create(data))
 
 
 @api_bp.route('/departments/<int:dept_id>', methods=['PUT'])
 @login_required
 @admin_required
 def update_department(dept_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    bridge = _get_bridge()
+    return jsonify(bridge.department_update(dept_id, data))
 
 
 @api_bp.route('/departments/<int:dept_id>', methods=['DELETE'])
 @login_required
 @admin_required
 def delete_department(dept_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    bridge = _get_bridge()
+    return jsonify(bridge.department_delete(dept_id))
 
 
 # =========================================================================
-# 用户管理API（B端暂仅暴露login/profile → 待扩展）
+# 用户管理API（M7融合修复）
 # =========================================================================
 
 @api_bp.route('/users', methods=['GET'])
 @login_required
 def get_users():
-    user = get_current_user()
-    items = [user] if user else []
-    return success({'items': items, 'total': len(items), 'page': 1, 'per_page': 15, 'pages': 1})
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 15, type=int)
+    bridge = _get_bridge()
+    return jsonify(bridge.user_list(page=page, per_page=per_page,
+        username=request.args.get('username', ''),
+        real_name=request.args.get('real_name', ''),
+        user_type=request.args.get('user_type', '')))
 
 
 @api_bp.route('/users', methods=['POST'])
 @login_required
 @admin_required
 def create_user():
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get('username') or not data.get('real_name'):
+        return fail('用户名和姓名不能为空')
+    bridge = _get_bridge()
+    return jsonify(bridge.user_create(data))
 
 
 @api_bp.route('/users/<int:user_id>', methods=['PUT'])
 @login_required
 @admin_required
 def update_user(user_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    bridge = _get_bridge()
+    return jsonify(bridge.user_update(user_id, data))
 
 
 @api_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @login_required
 @admin_required
 def delete_user(user_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    bridge = _get_bridge()
+    return jsonify(bridge.user_delete(user_id))
 
 
 @api_bp.route('/users/<int:user_id>/status', methods=['PUT'])
 @login_required
 @admin_required
 def toggle_user_status(user_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    new_status = data.get('status', 0)
+    bridge = _get_bridge()
+    return jsonify(bridge.user_update(user_id, {'status': new_status}))
 
 
 # =========================================================================
-# 角色管理API（B端暂无）
+# 角色管理API（M7融合修复）
 # =========================================================================
 
 @api_bp.route('/roles', methods=['GET'])
 @login_required
 def get_roles():
-    return success([], '角色列表（B端待扩展）')
+    bridge = _get_bridge()
+    return jsonify(bridge.role_list())
 
 
 @api_bp.route('/roles', methods=['POST'])
 @login_required
 @admin_required
 def create_role():
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get('name'):
+        return fail('角色名称不能为空')
+    bridge = _get_bridge()
+    return jsonify(bridge.role_create(data))
 
 
 @api_bp.route('/roles/<int:role_id>', methods=['PUT'])
 @login_required
 @admin_required
 def update_role(role_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    bridge = _get_bridge()
+    return jsonify(bridge.role_update(role_id, data))
 
 
 @api_bp.route('/roles/<int:role_id>', methods=['DELETE'])
 @login_required
 @admin_required
 def delete_role(role_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    bridge = _get_bridge()
+    return jsonify(bridge.role_delete(role_id))
 
 
 # =========================================================================
@@ -179,21 +209,28 @@ def get_datadicts():
 @login_required
 @admin_required
 def create_datadict():
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get('dict_type') or not data.get('dict_value'):
+        return fail('字典类型和值不能为空')
+    bridge = _get_bridge()
+    return jsonify(bridge.datadict_create(data))
 
 
 @api_bp.route('/datadicts/<int:dd_id>', methods=['PUT'])
 @login_required
 @admin_required
 def update_datadict(dd_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    bridge = _get_bridge()
+    return jsonify(bridge.datadict_update(dd_id, data))
 
 
 @api_bp.route('/datadicts/<int:dd_id>', methods=['DELETE'])
 @login_required
 @admin_required
 def delete_datadict(dd_id):
-    return fail('此功能需B端扩展API后可用', 501)
+    bridge = _get_bridge()
+    return jsonify(bridge.datadict_delete(dd_id))
 
 
 # =========================================================================
@@ -383,25 +420,39 @@ def process_alarm_event(event_id):
 @api_bp.route('/camera-faults', methods=['GET'])
 @login_required
 def get_camera_faults():
-    return success({'items': [], 'total': 0, 'page': 1, 'pages': 0})
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 15, type=int)
+    bridge = _get_bridge()
+    return jsonify(bridge.camera_fault_list(page=page, per_page=per_page))
 
 
 @api_bp.route('/camera-faults/<int:fault_id>/repair', methods=['PUT'])
 @login_required
+@admin_required
 def repair_camera_fault(fault_id):
-    return fail('故障管理需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    remark = data.get('remark', '')
+    bridge = _get_bridge()
+    return jsonify(bridge.camera_fault_repair(fault_id, remark))
 
 
 @api_bp.route('/cloudbox-faults', methods=['GET'])
 @login_required
 def get_cloudbox_faults():
-    return success({'items': [], 'total': 0, 'page': 1, 'pages': 0})
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 15, type=int)
+    bridge = _get_bridge()
+    return jsonify(bridge.cloudbox_fault_list(page=page, per_page=per_page))
 
 
 @api_bp.route('/cloudbox-faults/<int:fault_id>/repair', methods=['PUT'])
 @login_required
+@admin_required
 def repair_cloudbox_fault(fault_id):
-    return fail('故障管理需B端扩展API后可用', 501)
+    data = request.get_json(force=True, silent=True) or {}
+    remark = data.get('remark', '')
+    bridge = _get_bridge()
+    return jsonify(bridge.cloudbox_fault_repair(fault_id, remark))
 
 
 # =========================================================================
@@ -440,9 +491,12 @@ def get_alarm_by_level():
 @api_bp.route('/statistics/device-fault-stats', methods=['GET'])
 @login_required
 def get_device_fault_stats():
+    bridge = _get_bridge()
+    camera_stats = bridge.camera_fault_stats()
+    cloudbox_stats = bridge.cloudbox_fault_stats()
     return success({
-        'camera_faults': {'today': 0, 'week': 0, 'month': 0},
-        'cloudbox_faults': {'today': 0, 'week': 0, 'month': 0},
+        'camera_faults': camera_stats,
+        'cloudbox_faults': cloudbox_stats,
     })
 
 

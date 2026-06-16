@@ -12,8 +12,8 @@
     "server": {
         "url": "http://localhost:8080",
         "_comment": "本地开发用localhost:8080(PHP后端)，生产环境改为实际服务器地址",
-        "api_key": "flame-edge-2026-secure-key",
-        "_api_key_note": "边缘设备共享密钥，与Flask config.py中EDGE_API_KEY一致，通过X-API-Key头传递",
+        "api_key": "",
+        "_api_key_note": "必须设置！通过环境变量 EDGE_API_KEY 传入，或直接填在此处。与Flask config.py中EDGE_API_KEY一致。开发环境默认值: flame-edge-dev-key-2026",
         "heartbeat_interval_s": 30,
         "upload_timeout_s": 30
     },

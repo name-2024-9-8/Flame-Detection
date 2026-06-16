@@ -98,6 +98,46 @@ $route['api/detect/upload']                 = 'api/Detect/upload';
 $route['api/device/heartbeat']              = 'api/Detect/heartbeat';
 $route['api/device/error']                  = 'api/Detect/device_error';
 
+// 用户管理 CRUD（M7融合修复新增）
+$route['api/users']                         = 'api/User/index';
+$route['api/users/create']                  = 'api/User/create';
+$route['api/users/(:num)']                  = 'api/User/detail/$1';
+$route['api/users/(:num)/update']           = 'api/User/update/$1';
+$route['api/users/(:num)/delete']           = 'api/User/delete/$1';
+
+// 角色管理 CRUD（M7融合修复新增）
+$route['api/roles']                         = 'api/Role/index';
+$route['api/roles/create']                  = 'api/Role/create';
+$route['api/roles/(:num)']                  = 'api/Role/detail/$1';
+$route['api/roles/(:num)/update']           = 'api/Role/update/$1';
+$route['api/roles/(:num)/delete']           = 'api/Role/delete/$1';
+
+// 部门管理 CRUD（M7融合修复新增）
+$route['api/branches']                      = 'api/Branch/index';
+$route['api/branches/tree']                 = 'api/Branch/tree';
+$route['api/branches/create']               = 'api/Branch/create';
+$route['api/branches/(:num)']               = 'api/Branch/detail/$1';
+$route['api/branches/(:num)/update']        = 'api/Branch/update/$1';
+$route['api/branches/(:num)/delete']        = 'api/Branch/delete/$1';
+
+// 数据字典 CRUD（M7融合修复新增）
+$route['api/dictionary']                    = 'api/Dictionary/index';
+$route['api/dictionary/types']              = 'api/Dictionary/types';
+$route['api/dictionary/create']             = 'api/Dictionary/create';
+$route['api/dictionary/(:num)']             = 'api/Dictionary/detail/$1';
+$route['api/dictionary/(:num)/update']      = 'api/Dictionary/update/$1';
+$route['api/dictionary/(:num)/delete']      = 'api/Dictionary/delete/$1';
+
+// 故障管理（M7融合修复新增）
+$route['api/faults/camera']                 = 'api/Fault/camera_faults';
+$route['api/faults/camera/(:num)/repair']   = 'api/Fault/camera_repair/$1';
+$route['api/faults/device']                 = 'api/Fault/device_faults';
+$route['api/faults/device/(:num)/repair']   = 'api/Fault/device_repair/$1';
+
+// 系统配置（M7融合修复新增）
+$route['api/config']                        = 'api/Config/index';
+$route['api/config/update']                 = 'api/Config/update';
+
 // WebService 数据交换
 $route['api/webservice/alarm']              = 'api/WebService/alarm';
 $route['api/webservice/device/(:num)']      = 'api/WebService/device/$1';

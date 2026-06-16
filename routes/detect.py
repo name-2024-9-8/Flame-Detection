@@ -7,7 +7,7 @@
           PHP后端进一步验证 device_id 是否在数据库注册
 =============================================================================
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import requests
 
 PHP_API_BASE = 'http://localhost:8080/index.php/api'
@@ -17,7 +17,14 @@ detect_bp = Blueprint('detect', __name__, url_prefix='/api')
 def _verify_api_key():
     """验证边缘设备API密钥，不通过返回(响应,状态码)，通过返回None"""
     api_key = request.headers.get('X-API-Key', '')
-    if not api_key or api_key != 'flame-edge-2026-secure-key':
+    expected = current_app.config.get('EDGE_API_KEY', '')
+    if not expected:
+        return jsonify({
+            'code': 500,
+            'message': '服务器配置错误：EDGE_API_KEY 未设置',
+            'data': None
+        }), 500
+    if not api_key or api_key != expected:
         return jsonify({
             'code': 401,
             'message': '未授权：缺少有效的边缘设备API密钥（X-API-Key头）',

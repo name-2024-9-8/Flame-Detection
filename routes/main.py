@@ -8,6 +8,22 @@
 """
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from routes.auth import login_required, admin_required, get_current_user
+from api_bridge import APIBridge
+
+
+def _get_bridge():
+    """获取API桥接实例"""
+    jwt = session.get('jwt_token', '')
+    if jwt and not APIBridge.get_token():
+        APIBridge.set_token(jwt)
+    return APIBridge
+
+
+def _list_items(result):
+    """安全提取items列表"""
+    if result and result.get('code') == 200:
+        return result.get('data', {}).get('items', result.get('data', []))
+    return []
 from datetime import datetime, timedelta
 import json
 
@@ -198,7 +214,10 @@ def system_config():
 @admin_required
 def department():
     """部门管理页面"""
-    return render_template('system/department.html', departments=[])
+    bridge = _get_bridge()
+    dept_result = bridge.department_list()
+    departments = _list_items(dept_result)
+    return render_template('system/department.html', departments=departments)
 
 
 @main_bp.route('/system/user')
@@ -206,7 +225,10 @@ def department():
 @admin_required
 def user_management():
     """用户管理页面"""
-    return render_template('system/user.html', users=[], departments=[], roles=[])
+    bridge = _get_bridge()
+    depts = _list_items(bridge.department_list())
+    roles = bridge.role_list().get('data', []) if bridge.role_list().get('code') == 200 else []
+    return render_template('system/user.html', users=[], departments=depts, roles=roles)
 
 
 @main_bp.route('/system/role')
@@ -214,7 +236,9 @@ def user_management():
 @admin_required
 def role_management():
     """角色管理页面"""
-    return render_template('system/role.html', roles=[])
+    bridge = _get_bridge()
+    roles = bridge.role_list().get('data', []) if bridge.role_list().get('code') == 200 else []
+    return render_template('system/role.html', roles=roles)
 
 
 @main_bp.route('/system/datadict')
@@ -222,7 +246,14 @@ def role_management():
 @admin_required
 def datadict():
     """数据字典页面"""
-    return render_template('system/datadict.html', dicts=[], dict_types=[])
+    bridge = _get_bridge()
+    result = bridge.datadict_list()
+    items = []
+    types = []
+    if result.get('code') == 200:
+        items = result.get('data', {}).get('items', [])
+        types = result.get('data', {}).get('types', [])
+    return render_template('system/datadict.html', dicts=items, dict_types=types)
 
 
 # =========================================================================
@@ -257,24 +288,33 @@ def alarm_event():
 @main_bp.route('/alarm/review')
 @login_required
 def alarm_review():
-    """事件处理审核页面 — 数据由AJAX加载"""
-    return render_template('alarm/review.html', events=[])
+    """事件处理审核页面 — 加载待审核(status=2)的报警事件"""
+    bridge = _get_bridge()
+    result = bridge.alarm_list(per_page=50, status='2')
+    events = _list_items(result)
+    return render_template('alarm/review.html', events=events)
 
 
 @main_bp.route('/alarm/camera-fault')
 @login_required
 def camera_fault():
     """摄像头故障页面"""
-    fault_stats = {'today': 0, 'week': 0, 'month': 0, 'year': 0}
-    return render_template('alarm/camera_fault.html', faults=[], fault_stats=fault_stats)
+    bridge = _get_bridge()
+    result = bridge.camera_fault_list(per_page=50)
+    faults = _list_items(result)
+    stats = result.get('data', {}).get('stats', {}) if result.get('code') == 200 else {}
+    return render_template('alarm/camera_fault.html', faults=faults, fault_stats=stats)
 
 
 @main_bp.route('/alarm/cloudbox-fault')
 @login_required
 def cloudbox_fault():
     """AI云盒故障页面"""
-    fault_stats = {'today': 0, 'week': 0, 'month': 0, 'year': 0}
-    return render_template('alarm/cloudbox_fault.html', faults=[], fault_stats=fault_stats)
+    bridge = _get_bridge()
+    result = bridge.cloudbox_fault_list(per_page=50)
+    faults = _list_items(result)
+    stats = result.get('data', {}).get('stats', {}) if result.get('code') == 200 else {}
+    return render_template('alarm/cloudbox_fault.html', faults=faults, fault_stats=stats)
 
 
 # =========================================================================

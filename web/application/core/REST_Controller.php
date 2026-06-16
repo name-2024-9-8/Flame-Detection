@@ -51,20 +51,23 @@ class REST_Controller extends CI_Controller {
     }
 
     /**
-     * 验证当前用户是否为管理员角色
+     * Check if current user is admin (Account=admin or RoleId=1)
      */
     protected function require_admin() {
         $this->require_auth();
-        $user = $this->db
-            ->select('r.Name as RoleName')
-            ->from('T_UserRole ur')
-            ->join('T_Role r', 'ur.RoleId = r.Id')
-            ->where('ur.UserId', $this->current_user_id)
-            ->get()->row();
-        if (!$user || $user->RoleName !== self::ROLE_ADMIN) {
-            $this->error('需要管理员权限', $this->http_forbidden);
+        // admin account always has access
+        $u = $this->db->get_where('T_User', array('Id' => $this->current_user_id))->row();
+        if ($u && $u->Account === 'admin') return;
+        // check RoleId=1 (super admin)
+        $ur = $this->db->get_where('T_UserRole', array(
+            'UserId' => $this->current_user_id,
+            'RoleId' => 1,
+        ))->row();
+        if (!$ur) {
+            $this->error('Need admin permission', $this->http_forbidden);
         }
     }
+
 
     // ─────────────────────────────────
     //  统一 JSON 响应
