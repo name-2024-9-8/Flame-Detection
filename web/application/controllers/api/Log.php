@@ -6,7 +6,7 @@
  * @studentId 12303070414
  * @created   2026-06-12
  * @modified  2026-06-12
- * @task      人员B — 融合补充：日志查询API
+ * @task      王永林 — 融合补充：日志查询API
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 

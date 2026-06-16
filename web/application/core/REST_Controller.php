@@ -6,7 +6,7 @@
  * @studentId 12303070414
  * @created   2026-06-11
  * @modified  2026-06-11
- * @task      人员B — 后端开发与系统集成（RESTful API 基础框架）
+ * @task      王永林 — 后端开发与系统集成（RESTful API 基础框架）
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 

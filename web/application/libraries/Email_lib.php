@@ -6,7 +6,7 @@
  * @studentId 12303070414
  * @created   2026-06-11
  * @modified  2026-06-11
- * @task      人员B — 阶段3 核心业务后端：快速汇报模块（SMTP/微信/短信）
+ * @task      王永林 — 阶段3 核心业务后端：快速汇报模块（SMTP/微信/短信）
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 

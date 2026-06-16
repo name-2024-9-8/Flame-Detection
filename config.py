@@ -2,7 +2,7 @@
 =============================================================================
 视频AI智能识别及预警管理信息系统 - 火焰识别
 配置文件
-作者：人员C（前端开发与质量保障工程师）
+作者：段林川（前端开发与质量保障工程师）
 创建时间：2026-06-11
 功能描述：系统全局配置，包括数据库、JWT、地图、报警阈值等参数
 =============================================================================
@@ -30,11 +30,11 @@ class Config:
     # 站点名称
     SITE_NAME = '视频AI智能识别及预警管理信息系统'
 
-    # JWT配置 (与人员B的后端API对接)
+    # JWT配置 (与王永林的后端API对接)
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'fire-alarm-jwt-secret-2026')
     JWT_ACCESS_TOKEN_EXPIRES = 86400  # 24小时
 
-    # ★ 融合模式：人员B的PHP API基地址
+    # ★ 融合模式：王永林的PHP API基地址
     PHP_API_BASE = os.environ.get('PHP_API_BASE', 'http://localhost:8080/index.php/api')
 
     # ★ 融合模式开关：True=使用B的PHP API，False=使用本地SQLite（兼容开发/演示）

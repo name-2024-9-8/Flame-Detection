@@ -31,9 +31,9 @@
 
 | 人员 | 负责模块 | 核心内容 |
 |------|---------|---------|
-| **A · 郭** | AI边缘检测 | YOLO11训练/推理、视频采集、时域滤波、GPS定位、Orange Pi 5部署 |
+| **A · 郭俊奇** | AI边缘检测 | YOLO11训练/推理、视频采集、时域滤波、GPS定位、Orange Pi 5部署 |
 | **B · 王永林** | 后端+数据库 | PHP RESTful API、MySQL 15表设计、JWT认证、设备/报警/日志CRUD |
-| **C** | 前端Web | Flask + 17页面、地图可视化、API桥接代理 |
+| **C · 段林川** | 前端Web | Flask + 17页面、地图可视化、API桥接代理 |
 
 ## 目录结构
 
@@ -87,7 +87,7 @@ backed/
 │   │   └── 001_create_tables.sql    # 15张表建表语句 + 种子数据
 │   └── vendor/                 #   Composer 依赖
 │
-└── edge-ai/                    # ★ 人员A · 边缘AI模块 (M7集成)
+└── edge-ai/                    # ★ 郭俊奇 · 边缘AI模块 (M7集成)
     ├── main.py                 #   统一入口 (train/eval/calib/deploy)
     ├── config.py               #   AI模型配置
     ├── edge/

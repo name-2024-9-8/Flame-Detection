@@ -6,7 +6,7 @@
  * @studentId 12303070414
  * @created   2026-06-11
  * @modified  2026-06-11
- * @task      人员B — 阶段4 数据交换与系统对接
+ * @task      王永林 — 阶段4 数据交换与系统对接
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 

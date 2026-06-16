@@ -44,7 +44,7 @@ desktop.ini
 *.pdf
 *.doc
 
-# ── 边缘AI（人员A）生成文件 ──
+# ── 边缘AI（郭俊奇）生成文件 ──
 edge-ai/output/logs/
 edge-ai/output/clips/
 edge-ai/output/export/*.rknn

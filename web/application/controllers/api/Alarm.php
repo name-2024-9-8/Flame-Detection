@@ -6,7 +6,7 @@
  * @studentId 12303070414
  * @created   2026-06-11
  * @modified  2026-06-11
- * @task      人员B — 阶段3 核心业务后端：报警事件CRUD API（A↔B关键接口）
+ * @task      王永林 — 阶段3 核心业务后端：报警事件CRUD API（A↔B关键接口）
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 

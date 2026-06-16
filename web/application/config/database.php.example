@@ -6,7 +6,7 @@
  * @author    王永林
  * @studentId 12303070414
  * @created   2026-06-11
- * @task      人员B — 阶段1 数据库配置
+ * @task      王永林 — 阶段1 数据库配置
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 

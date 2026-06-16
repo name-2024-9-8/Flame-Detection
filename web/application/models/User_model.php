@@ -6,7 +6,7 @@
  * @studentId 12303070414
  * @created   2026-06-11
  * @modified  2026-06-16  融合修复: 新增用户CRUD方法
- * @task      人员B — 阶段2 用户信息库/JWT认证支撑
+ * @task      王永林 — 阶段2 用户信息库/JWT认证支撑
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 class User_model extends CI_Model {

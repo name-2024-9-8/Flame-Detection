@@ -8,7 +8,7 @@ Flask==3.1.0
 Flask-SQLAlchemy==3.1.1
 Flask-Login==0.6.3
 
-# JWT认证（与人员B后端API对接）
+# JWT认证（与王永林后端API对接）
 PyJWT==2.9.0
 
 # 密码哈希

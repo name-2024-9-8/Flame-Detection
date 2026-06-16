@@ -1,6 +1,6 @@
 <?php
 /**
- * Detect 边缘检测数据接入控制器 — 接收人员A边缘端报警/视频/心跳/故障上报
+ * Detect 边缘检测数据接入控制器 — 接收郭俊奇边缘端报警/视频/心跳/故障上报
  *
  * URL 路由:
  *   POST /api/detect/alarm      — 报警事件上报 (JSON)
@@ -8,7 +8,7 @@
  *   POST /api/device/heartbeat  — 设备心跳保活
  *   POST /api/device/error      — 设备故障上报
  *
- * @author    王永林（集成人员A边缘端API）
+ * @author    王永林（集成郭俊奇边缘端API）
  * @studentId 12303070414
  * @created   2026-06-16
  * @modified  2026-06-16

@@ -92,7 +92,7 @@ $route['api/export/word']                   = 'api/Export/word';
 $route['api/logs/access']                   = 'api/Log/access';
 $route['api/logs/operation']                = 'api/Log/operation';
 
-// 边缘检测数据接入（人员A → 人员B 接口，M7融合新增）
+// 边缘检测数据接入（郭俊奇 → 王永林 接口，M7融合新增）
 $route['api/detect/alarm']                  = 'api/Detect/alarm';
 $route['api/detect/upload']                 = 'api/Detect/upload';
 $route['api/device/heartbeat']              = 'api/Detect/heartbeat';

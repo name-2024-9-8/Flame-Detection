@@ -6,7 +6,7 @@
  * @studentId 12303070414
  * @created   2026-06-11
  * @modified  2026-06-11
- * @task      人员B — 前端联调支撑：API 文档 + 登录页
+ * @task      王永林 — 前端联调支撑：API 文档 + 登录页
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 

@@ -1,12 +1,12 @@
 <?php
 /**
- * API 接口文档页 — 供人员C联调使用
+ * API 接口文档页 — 供段林川联调使用
  *
  * @author    王永林
  * @studentId 12303070414
  * @created   2026-06-11
  * @modified  2026-06-11
- * @task      人员B — 后端 API 联调文档
+ * @task      王永林 — 后端 API 联调文档
  */
 ?><!DOCTYPE html>
 <html lang="zh-CN">
@@ -56,7 +56,7 @@ pre { background:#1e293b; color:#e2e8f0; padding:12px 16px; border-radius:6px; f
 
 <div class="main">
 <h1>视频AI智能识别及预警管理系统</h1>
-<p style="color:#64748b;font-size:14px;">人员B — 王永林 (12303070414) | Base: <code>http://localhost:8080/index.php</code></p>
+<p style="color:#64748b;font-size:14px;">王永林 (12303070414) | Base: <code>http://localhost:8080/index.php</code></p>
 
 <!-- Auth -->
 <h2 id="auth">🔐 Auth 认证</h2>
