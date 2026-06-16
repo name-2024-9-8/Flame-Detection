@@ -1,9 +1,9 @@
 """
 =============================================================================
 主页面路由 — 融合模式（页面数据从B的PHP API获取，模板保持不变）
-作者：人员C（前端） + 人员B（后端API桥接）
+作者：人员C（前端—段林川） + 人员B（后端API桥接—王永林）
 创建时间：2026-06-11
-修改时间：2026-06-12  融合：改为调用B的PHP API桥接层获取数据
+修改时间：2026-06-16  修复：_list_items兼容bare list；消除双重API调用
 =============================================================================
 """
 from flask import Blueprint, render_template, request, session, redirect, url_for
@@ -51,8 +51,10 @@ def _success_or_empty(result, key='data'):
 
 
 def _list_items(result):
-    """从桥接结果中提取列表项"""
+    """从桥接结果中提取列表项（兼容bare list和{items:[...]}两种格式）"""
     data = _success_or_empty(result)
+    if isinstance(data, list):
+        return data
     return data.get('items', []) if isinstance(data, dict) else []
 
 
@@ -227,7 +229,8 @@ def user_management():
     """用户管理页面"""
     bridge = _get_bridge()
     depts = _list_items(bridge.department_list())
-    roles = bridge.role_list().get('data', []) if bridge.role_list().get('code') == 200 else []
+    role_result = bridge.role_list()
+    roles = role_result.get('data', []) if role_result.get('code') == 200 else []
     return render_template('system/user.html', users=[], departments=depts, roles=roles)
 
 
@@ -237,7 +240,8 @@ def user_management():
 def role_management():
     """角色管理页面"""
     bridge = _get_bridge()
-    roles = bridge.role_list().get('data', []) if bridge.role_list().get('code') == 200 else []
+    role_result = bridge.role_list()
+    roles = role_result.get('data', []) if role_result.get('code') == 200 else []
     return render_template('system/role.html', roles=roles)
 
 

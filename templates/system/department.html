@@ -26,11 +26,11 @@
                         {% for d in departments %}
                         <tr>
                             <td>{{ d.id }}</td><td>{{ d.name }}</td><td>{{ d.code or '-' }}</td>
-                            <td>{{ d.parent.name if d.parent else '-' }}</td><td>{{ d.sort_order }}</td>
+                            <td>{{ d.parent_name or '-' }}</td><td>{{ d.sort_order }}</td>
                             <td><span class="badge bg-{{ 'success' if d.status==1 else 'secondary' }}">{{ '启用' if d.status==1 else '禁用' }}</span></td>
                             <td>{{ d.created_at|datetime_format }}</td>
                             <td>
-                                <button class="btn btn-info btn-action text-white" onclick="editDept({{ d.to_dict()|tojson }})"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-info btn-action text-white" onclick="editDept({{ d|tojson }})"><i class="bi bi-pencil"></i></button>
                                 <button class="btn btn-danger btn-action" onclick="deleteDept({{ d.id }},'{{ d.name }}')"><i class="bi bi-trash"></i></button>
                             </td>
                         </tr>

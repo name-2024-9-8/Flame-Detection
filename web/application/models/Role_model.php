@@ -5,7 +5,7 @@
  * @author    王永林
  * @studentId 12303070414
  * @created   2026-06-16
- * @modified  2026-06-16
+ * @modified  2026-06-16  修复：get_list()加载authorities权限列表
  * @task      M7: 融合修复 — 角色管理数据层
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
@@ -18,17 +18,18 @@ class Role_model extends CI_Model {
     }
 
     /**
-     * 角色列表
+     * 角色列表（含权限列表）
      */
     public function get_list() {
         $this->db->where('IsDelete', 0);
         $list = $this->db->get('T_Role')->result_array();
 
-        // 关联权限数
+        // 关联权限数 + 权限列表
         foreach ($list as &$item) {
-            $item['authority_count'] = $this->db
+            $item['authorities'] = $this->db
                 ->where('RoleId', $item['Id'])
-                ->count_all_results('T_Authority');
+                ->get('T_Authority')->result_array();
+            $item['authority_count'] = count($item['authorities']);
             $item['user_count'] = $this->db
                 ->where('RoleId', $item['Id'])
                 ->count_all_results('T_UserRole');
