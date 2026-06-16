@@ -43,3 +43,22 @@ desktop.ini
 *.docx
 *.pdf
 *.doc
+
+# ── 边缘AI（人员A）生成文件 ──
+edge-ai/output/logs/
+edge-ai/output/clips/
+edge-ai/output/export/*.rknn
+edge-ai/output/export/*.pt
+edge-ai/output/export/*.onnx
+edge-ai/output/yolo_train/
+edge-ai/data/smoke_dataset/
+edge-ai/__pycache__/
+edge-ai/edge/__pycache__/
+edge-ai/localization/__pycache__/
+*.pt
+*.onnx
+*.rknn
+edge-ai/edge_config.json
+
+# ── 上传目录 ──
+web/uploads/

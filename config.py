@@ -56,6 +56,9 @@ class Config:
     # 系统Logo文字
     SYSTEM_LOGO_TEXT = 'AI火焰识别预警'
 
+    # 边缘设备API密钥（A端对接B+C的共享密钥，防止未授权上报）
+    EDGE_API_KEY = os.environ.get('EDGE_API_KEY', 'flame-edge-2026-secure-key')
+
     # 分页配置
     ITEMS_PER_PAGE = 15
 

@@ -5,8 +5,7 @@
  * @author    王永林
  * @studentId 12303070414
  * @created   2026-06-11
- * @modified  2026-06-11
- * @task      人员B — 阶段2 RESTful API 路由映射
+ * @modified  2026-06-16  融合: 新增边缘检测数据接入路由（/api/detect/*, /api/device/*）
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 
@@ -92,6 +91,12 @@ $route['api/export/word']                   = 'api/Export/word';
 // 日志查询（融合联调新增）
 $route['api/logs/access']                   = 'api/Log/access';
 $route['api/logs/operation']                = 'api/Log/operation';
+
+// 边缘检测数据接入（人员A → 人员B 接口，M7融合新增）
+$route['api/detect/alarm']                  = 'api/Detect/alarm';
+$route['api/detect/upload']                 = 'api/Detect/upload';
+$route['api/device/heartbeat']              = 'api/Detect/heartbeat';
+$route['api/device/error']                  = 'api/Detect/device_error';
 
 // WebService 数据交换
 $route['api/webservice/alarm']              = 'api/WebService/alarm';

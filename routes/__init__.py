@@ -14,7 +14,9 @@ def register_routes(app):
     from routes.auth import auth_bp
     from routes.main import main_bp
     from routes.api import api_bp
+    from routes.detect import detect_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(detect_bp)

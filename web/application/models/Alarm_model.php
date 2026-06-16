@@ -34,7 +34,7 @@ class Alarm_model extends CI_Model {
             'Picture'       => isset($data['picture'])        ? $data['picture']        : null,
             'VideoUrl'      => isset($data['video_url'])      ? $data['video_url']      : null,
             'AreaId'        => isset($data['area_id'])        ? intval($data['area_id']) : null,
-            'CreatTime'     => date('Y-m-d H:i:s'),
+            'CreatTime'     => isset($data['creattime'])      ? $data['creattime']      : date('Y-m-d H:i:s'),
             'CameraId'      => isset($data['camera_id'])      ? intval($data['camera_id']) : null,
             'DeviceId'      => isset($data['device_id'])      ? intval($data['device_id']) : null,
             'Status'        => '1',  // 1=报警
