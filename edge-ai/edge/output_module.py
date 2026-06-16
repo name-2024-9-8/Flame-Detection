@@ -94,10 +94,11 @@ class ResultPublisher:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
+        if not api_key:
+            raise ValueError("API密钥未配置! 请在 edge_config.json 的 server.api_key 中设置，"
+                             "或通过 EDGE_API_KEY 环境变量传入")
         self._session = requests.Session()
-        self._session.headers.update({
-            'X-API-Key': api_key if api_key else 'flame-edge-2026-secure-key',
-        })
+        self._session.headers.update({'X-API-Key': api_key})
         self._lock = threading.Lock()
         self._pending_events: list[AlarmEvent] = []
         self._upload_timeout = 30

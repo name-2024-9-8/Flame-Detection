@@ -45,9 +45,16 @@ class Detect extends REST_Controller {
         if (empty($data['device_id'])) {
             $this->error('缺少设备ID（device_id）');
         }
-        $device = $this->db->get_where('T_Device', array('Id' => $data['device_id']))->row();
+        if (empty($data['device_mac'])) {
+            $this->error('缺少设备MAC地址（device_mac）');
+        }
+        // 设备 ID + MAC 联合校验（防止未授权设备伪造报警）
+        $device = $this->db->get_where('T_Device', array(
+            'Id'  => $data['device_id'],
+            'MAC' => $data['device_mac'],
+        ))->row();
         if (!$device) {
-            $this->error('设备不存在（device_id=' . $data['device_id'] . '），请先在管理后台注册设备', $this->http_forbidden);
+            $this->error('设备验证失败：device_id 与 device_mac 不匹配，或设备未注册', $this->http_forbidden);
         }
 
         // ── 字段映射: A的AlarmEvent → B的T_DetectResult ──
@@ -179,10 +186,16 @@ class Detect extends REST_Controller {
         if (empty($data['device_id'])) {
             $this->error('缺少设备ID（device_id）');
         }
-
-        $device = $this->db->get_where('T_Device', array('Id' => $data['device_id']))->row();
+        if (empty($data['mac'])) {
+            $this->error('缺少设备MAC地址（mac）');
+        }
+        // 设备 ID + MAC 联合校验
+        $device = $this->db->get_where('T_Device', array(
+            'Id'  => $data['device_id'],
+            'MAC' => $data['mac'],
+        ))->row();
         if (!$device) {
-            $this->error('设备不存在', $this->http_not_found);
+            $this->error('设备验证失败：device_id 与 MAC 不匹配，或设备未注册', $this->http_forbidden);
         }
 
         // 更新设备最后通信时间
@@ -212,6 +225,17 @@ class Detect extends REST_Controller {
         }
         if (empty($data['device_id'])) {
             $this->error('缺少设备ID（device_id）');
+        }
+        if (empty($data['mac'])) {
+            $this->error('缺少设备MAC地址（mac）');
+        }
+        // 设备 ID + MAC 联合校验
+        $device = $this->db->get_where('T_Device', array(
+            'Id'  => $data['device_id'],
+            'MAC' => $data['mac'],
+        ))->row();
+        if (!$device) {
+            $this->error('设备验证失败：device_id 与 MAC 不匹配，或设备未注册', $this->http_forbidden);
         }
 
         // 插入故障记录到 T_DeviceError
