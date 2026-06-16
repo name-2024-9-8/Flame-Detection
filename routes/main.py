@@ -9,21 +9,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from routes.auth import login_required, admin_required, get_current_user
 from api_bridge import APIBridge
-
-
-def _get_bridge():
-    """获取API桥接实例"""
-    jwt = session.get('jwt_token', '')
-    if jwt and not APIBridge.get_token():
-        APIBridge.set_token(jwt)
-    return APIBridge
-
-
-def _list_items(result):
-    """安全提取items列表"""
-    if result and result.get('code') == 200:
-        return result.get('data', {}).get('items', result.get('data', []))
-    return []
 from datetime import datetime, timedelta
 import json
 
@@ -158,12 +143,7 @@ def dashboard():
     total_alarms = overview.get('total_alarms', 0)
     pending_alarms = overview.get('pending_alarms', 0)
 
-    # 本周报警趋势 (7天)
-    week_alarms = _success_or_empty(bridge.statistics_by_date(days=7)) or []
-    if isinstance(week_alarms, list):
-        week_alarms = [{'date': d.get('date', ''), 'count': d.get('count', 0)} for d in week_alarms]
-
-    # 本月报警趋势 (30天)
+    # 本月报警趋势 (30天，dashboard.html唯一引用的趋势图)
     month_alarms = _success_or_empty(bridge.statistics_by_date(days=30)) or []
     if isinstance(month_alarms, list):
         month_alarms = [{'date': d.get('date', ''), 'count': d.get('count', 0)} for d in month_alarms]
@@ -192,7 +172,6 @@ def dashboard():
         total_alarms=total_alarms,
         pending_alarms=pending_alarms,
         device_online_rate=device_online_rate,
-        week_alarms_json=json.dumps(week_alarms, ensure_ascii=False),
         month_alarms_json=json.dumps(month_alarms, ensure_ascii=False),
         region_data_json=json.dumps(region_data, ensure_ascii=False),
         level_data_json=json.dumps(level_data, ensure_ascii=False),
@@ -299,7 +278,7 @@ def alarm_event():
 def alarm_review():
     """事件处理审核页面 — 加载待审核(status=2)的报警事件"""
     bridge = _get_bridge()
-    result = bridge.alarm_list(per_page=50, status='2')
+    result = bridge.alarm_list(per_page=50, status='1')  # 审核页加载待处理(status=1)的报警
     events = _list_items(result)
     return render_template('alarm/review.html', events=events)
 

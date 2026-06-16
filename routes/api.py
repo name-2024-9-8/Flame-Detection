@@ -364,6 +364,8 @@ def get_alarm_events():
     per_page = request.args.get('per_page', 15, type=int)
     event_type = request.args.get('event_type', type=int)
     process_status = request.args.get('process_status', type=int)
+    alarm_level = request.args.get('alarm_level', type=int)
+    keyword = request.args.get('keyword', '')
     date_from = request.args.get('date_from', '')
     date_to = request.args.get('date_to', '')
 
@@ -372,6 +374,10 @@ def get_alarm_events():
         filters['event_type'] = event_type
     if process_status:
         filters['status'] = process_status
+    if alarm_level:
+        filters['alarm_level'] = alarm_level
+    if keyword:
+        filters['keyword'] = keyword
     if date_from:
         filters['start_time'] = date_from
     if date_to:

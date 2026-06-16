@@ -79,6 +79,13 @@ class Alarm_model extends CI_Model {
         if (!empty($filters['camera_id'])) {
             $this->db->where('d.CameraId', $filters['camera_id']);
         }
+        // 关键词搜索（事件编号/位置描述）
+        if (!empty($filters['keyword'])) {
+            $this->db->group_start()
+                     ->like('d.Location', $filters['keyword'])
+                     ->or_like('d.Id', $filters['keyword'])
+                     ->group_end();
+        }
         // 时间范围
         if (!empty($filters['start_time'])) {
             $this->db->where('d.CreatTime >=', $filters['start_time']);
@@ -186,6 +193,19 @@ class Alarm_model extends CI_Model {
         if ($start) $this->db->where('d.CreatTime >=', $start);
         if ($end)   $this->db->where('d.CreatTime <=', $end);
         $this->db->group_by('d.AreaId');
+        $this->db->order_by('total', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * 按紧急程度统计（报警级别：紧急/重要/一般/提示）
+     */
+    public function stats_by_urgency($start = null, $end = null) {
+        $this->db->select("UrgencyDegree as urgency_name, COUNT(*) as total");
+        $this->db->from('T_DetectResult');
+        if ($start) $this->db->where('CreatTime >=', $start);
+        if ($end)   $this->db->where('CreatTime <=', $end);
+        $this->db->group_by('UrgencyDegree');
         $this->db->order_by('total', 'DESC');
         return $this->db->get()->result_array();
     }

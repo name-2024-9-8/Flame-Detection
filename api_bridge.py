@@ -158,23 +158,28 @@ class APIBridge:
         params = {'page': page, 'per_page': per_page}
         # B的过滤参数
         filter_map = {
-            'status': 'status',          # B: '1'/'2'/'3'
-            'event_type': 'event_type',  # B: fire/smoke (字符串!)
+            'status': 'status',
+            'event_type': 'event_type',
             'area_id': 'area_id',
             'urgency_degree': 'urgency_degree',
             'device_id': 'device_id',
             'camera_id': 'camera_id',
             'start_time': 'start_time',
             'end_time': 'end_time',
+            'keyword': 'keyword',
+            'alarm_level': 'alarm_level',
         }
         for c_key, b_key in filter_map.items():
-            if c_key in filters and filters[c_key] is not None:
+            if c_key in filters and filters[c_key] is not None and filters[c_key] != '':
                 val = filters[c_key]
                 # C用数字(1/2/3)，B用字符串(fire/smoke)
                 if c_key == 'event_type':
-                    val = {1: 'fire', 2: 'smoke'}.get(val, val)
+                    val = {1: 'fire', 2: 'smoke', 3: 'device'}.get(val, val)
                 if c_key == 'status':
                     val = str(val)  # B用字符串状态
+                # C用数字(1-4)，B用中文(紧急/重要/一般/提示)
+                if c_key == 'alarm_level':
+                    val = {1: '紧急', 2: '重要', 3: '一般', 4: '提示'}.get(val, val)
                 params[b_key] = val
 
         result = cls._get('alarm/events', params=params)
@@ -402,12 +407,20 @@ class APIBridge:
         fault_cameras = cam_fault_result.get('data', {}).get('total', 0) if cam_fault_result.get('code') == 200 else 0
         fault_boxes = box_fault_result.get('data', {}).get('total', 0) if box_fault_result.get('code') == 200 else 0
         total_alarms = alarms_result.get('data', {}).get('total', 0)
-        pending_alarms = summary_result.get('data', {}).get('pending_count', 0) if summary_result.get('code') == 200 else 0
+        pending_alarms = int(summary_result.get('data', {}).get('pending_count', 0)) if summary_result.get('code') == 200 else 0
 
         # 今日告警 = 当日故障数（camera + device）
         cam_stats = cam_fault_result.get('data', {}).get('stats', {}) if cam_fault_result.get('code') == 200 else {}
         box_stats = box_fault_result.get('data', {}).get('stats', {}) if box_fault_result.get('code') == 200 else {}
         today_alarms = cam_stats.get('today', 0) + box_stats.get('today', 0)
+
+        # 本月报警数（从summary获取当月数据）
+        month_alarms = 0
+        result = cls._get('statistics', params={'dimension': 'summary',
+            'start_time': datetime.now().strftime('%Y-%m-01 00:00:00'),
+            'end_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+        if result.get('code') == 200:
+            month_alarms = result.get('data', {}).get('total', 0)
 
         return {
             'code': 200, 'msg': 'success',
@@ -421,7 +434,7 @@ class APIBridge:
                 'total_alarms': total_alarms,
                 'pending_alarms': pending_alarms,
                 'today_alarms': today_alarms,
-                'month_alarms': 0,
+                'month_alarms': month_alarms,
             }
         }
 
@@ -463,19 +476,23 @@ class APIBridge:
 
     @classmethod
     def statistics_by_level(cls):
-        """按紧急程度统计"""
-        # B没有直接按级别统计的API，通过汇总数据近似
-        result = cls._get('statistics', params={'dimension': 'summary'})
+        """按紧急程度统计（★修复：从PHP level维度获取真实报警级别分布）"""
+        result = cls._get('statistics', params={'dimension': 'level'})
         if result.get('code') == 200:
-            d = result.get('data', {})
+            level_order = {'紧急': 1, '重要': 2, '一般': 3, '提示': 4}
+            data = []
+            for row in result.get('data', []):
+                name = row.get('urgency_name', '未知')
+                data.append({
+                    'name': name,
+                    'value': row.get('total', 0),
+                    'order': level_order.get(name, 99),
+                })
+            # 按紧急程度排序
+            data.sort(key=lambda x: x['order'])
             return {
                 'code': 200, 'msg': 'success',
-                'data': [
-                    {'name': '火焰', 'value': d.get('fire_count', 0)},
-                    {'name': '烟雾', 'value': d.get('smoke_count', 0)},
-                    {'name': '待处理', 'value': d.get('pending_count', 0)},
-                    {'name': '已审核', 'value': d.get('reviewed_count', 0)},
-                ]
+                'data': [{'name': d['name'], 'value': d['value']} for d in data]
             }
         return cls._to_c_format(result)
 
@@ -501,32 +518,6 @@ class APIBridge:
             'hour_stats': [],
             'heatmap_points': points,
         }}
-
-    # =========================================================================
-    # 系统配置
-    # =========================================================================
-
-    @classmethod
-    def system_configs(cls):
-        """获取系统配置（从健康检查+数据字典拼凑）"""
-        return {
-            'code': 200, 'msg': 'success',
-            'data': [
-                {'id': 1, 'config_key': 'site_name', 'config_value': '视频AI智能识别及预警管理信息系统', 'config_type': 'string',
-                 'description': '站点名称'},
-                {'id': 2, 'config_key': 'fire_threshold', 'config_value': '0.85', 'config_type': 'float',
-                 'description': '火焰检测置信度阈值'},
-                {'id': 3, 'config_key': 'smoke_threshold', 'config_value': '0.80', 'config_type': 'float',
-                 'description': '烟雾检测置信度阈值'},
-                {'id': 4, 'config_key': 'logo_text', 'config_value': 'AI火焰识别预警', 'config_type': 'string',
-                 'description': '系统Logo文字'},
-            ]
-        }
-
-    @classmethod
-    def update_system_configs(cls, data):
-        """更新系统配置（暂不支持，需要B端扩展API）"""
-        return {'code': 200, 'msg': '配置更新已提交（部分配置需B端扩展支持）', 'data': None}
 
     # =========================================================================
     # 日志查询
@@ -622,7 +613,7 @@ class APIBridge:
             'event_type_name': {1: '火焰报警', 2: '烟雾报警', 3: '设备异常'}.get(event_type, '未知'),
             'alarm_level': alarm_level,
             'alarm_level_name': {1: '紧急', 2: '重要', 3: '一般', 4: '提示'}.get(alarm_level, '未知'),
-            'detection_confidence': float(b_item.get('Confidence', 0)) if b_item.get('Confidence') else None,
+            'detection_confidence': float(b_item.get('Confidence', 0)) if b_item.get('Confidence') else 0.0,
             'fire_area_ratio': None,
             'longitude': b_item.get('Longitude'),
             'latitude': b_item.get('Latitude'),

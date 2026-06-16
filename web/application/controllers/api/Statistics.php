@@ -50,8 +50,13 @@ class Statistics extends REST_Controller {
                 $result = $this->Alarm_model->stats_by_area($start, $end);
                 break;
 
+            case 'level':
+                // 按紧急程度统计
+                $result = $this->Alarm_model->stats_by_urgency($start, $end);
+                break;
+
             default:
-                $this->error('无效的统计维度，可选值：summary / time / area');
+                $this->error('无效的统计维度，可选值：summary / time / area / level');
         }
 
         $this->success($result);
