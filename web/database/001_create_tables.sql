@@ -296,8 +296,9 @@ VALUES (0.6, 640, 480, 5, 24, 10);
 INSERT INTO T_Dictionary (`Key`, `Value`) VALUES ('EventType',   'fire');
 INSERT INTO T_Dictionary (`Key`, `Value`) VALUES ('EventType',   'smoke');
 INSERT INTO T_Dictionary (`Key`, `Value`) VALUES ('UrgencyDegree','紧急');
+INSERT INTO T_Dictionary (`Key`, `Value`) VALUES ('UrgencyDegree','重要');
 INSERT INTO T_Dictionary (`Key`, `Value`) VALUES ('UrgencyDegree','一般');
-INSERT INTO T_Dictionary (`Key`, `Value`) VALUES ('UrgencyDegree','低');
+INSERT INTO T_Dictionary (`Key`, `Value`) VALUES ('UrgencyDegree','提示');
 INSERT INTO T_Dictionary (`Key`, `Value`, `Remark`) VALUES ('DeviceType',   '摄像头型号A', NULL);
 INSERT INTO T_Dictionary (`Key`, `Value`, `Remark`) VALUES ('DeviceType',   '摄像头型号B', NULL);
 

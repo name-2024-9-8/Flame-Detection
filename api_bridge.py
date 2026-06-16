@@ -162,12 +162,12 @@ class APIBridge:
             'event_type': 'event_type',
             'area_id': 'area_id',
             'urgency_degree': 'urgency_degree',
+            'alarm_level': 'urgency_degree',  # C→B: alarm_level -> urgency_degree
             'device_id': 'device_id',
             'camera_id': 'camera_id',
             'start_time': 'start_time',
             'end_time': 'end_time',
             'keyword': 'keyword',
-            'alarm_level': 'alarm_level',
         }
         for c_key, b_key in filter_map.items():
             if c_key in filters and filters[c_key] is not None and filters[c_key] != '':
