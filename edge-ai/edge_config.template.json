@@ -19,7 +19,7 @@
     },
 
     "model": {
-        "path": "output/export/smoke_detector_fp16.rknn",
+        "path": "output/yolo_train/weights/best.onnx",
         "conf_threshold": 0.25,
         "iou_threshold": 0.5,
         "img_size": 416
