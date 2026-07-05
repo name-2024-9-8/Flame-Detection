@@ -9,18 +9,58 @@ API 桥接层 — Flask前端 ↔ PHP后端
 =============================================================================
 """
 import math
+import threading
 import requests
 from datetime import datetime
 
 # B的PHP API 基础地址
-PHP_API_BASE = 'http://localhost:8080/index.php/api'
+PHP_API_BASE = 'http://127.0.0.1:8080/index.php/api'
+
+# 线程本地存储，避免多用户并发时JWT串用
+_local = threading.local()
 
 
 class APIBridge:
-    """PHP API 调用桥接，类级别缓存 JWT Token"""
+    """PHP API 调用桥接，线程安全的JWT Token管理"""
 
-    _token = None
-    _user_info = None
+    # =========================================================================
+    # Token 管理（线程本地存储）
+    # =========================================================================
+
+    @staticmethod
+    def _get_token():
+        return getattr(_local, 'token', None)
+
+    @staticmethod
+    def _set_token(token):
+        _local.token = token
+
+    @staticmethod
+    def _get_user_info():
+        return getattr(_local, 'user_info', None)
+
+    @staticmethod
+    def _set_user_info(info):
+        _local.user_info = info
+
+    @classmethod
+    def get_token(cls):
+        return cls._get_token()
+
+    @classmethod
+    def set_token(cls, token):
+        cls._set_token(token)
+
+    @classmethod
+    def get_user_info(cls):
+        return cls._get_user_info()
+
+    @classmethod
+    def logout(cls):
+        """登出（清空本地缓存）"""
+        _local.token = None
+        _local.user_info = None
+        return {'code': 200, 'msg': '登出成功', 'data': None}
 
     # =========================================================================
     # 底层 HTTP 调用
@@ -30,8 +70,9 @@ class APIBridge:
     def _get(cls, path, params=None, auth=True):
         """GET 请求"""
         headers = {}
-        if auth and cls._token:
-            headers['Authorization'] = 'Bearer ' + str(cls._token)
+        token = cls._get_token()
+        if auth and token:
+            headers['Authorization'] = 'Bearer ' + str(token)
         try:
             resp = requests.get(
                 PHP_API_BASE + '/' + path,
@@ -47,8 +88,9 @@ class APIBridge:
     def _post(cls, path, data=None, auth=True):
         """POST 请求"""
         headers = {}
-        if auth and cls._token:
-            headers['Authorization'] = 'Bearer ' + str(cls._token)
+        token = cls._get_token()
+        if auth and token:
+            headers['Authorization'] = 'Bearer ' + str(token)
         try:
             resp = requests.post(
                 PHP_API_BASE + '/' + path,
@@ -85,8 +127,8 @@ class APIBridge:
 
         if result.get('code') == 200:
             data = result.get('data', {})
-            cls._token = data.get('token')
-            cls._user_info = data.get('user', {})
+            cls._set_token(data.get('token'))
+            cls._set_user_info(data.get('user', {}))
             return {
                 'code': 200,
                 'msg': '登录成功',
@@ -94,7 +136,7 @@ class APIBridge:
                     'token': data.get('token'),
                     'token_type': 'Bearer',
                     'expires_in': data.get('expires_in', 86400),
-                    'user': cls._map_user(cls._user_info),
+                    'user': cls._map_user(cls._get_user_info()),
                 }
             }
         return cls._to_c_format(result)
@@ -118,35 +160,16 @@ class APIBridge:
         result = cls._post('auth/refresh')
         if result.get('code') == 200:
             data = result.get('data', {})
-            cls._token = data.get('token')
+            cls._set_token(data.get('token'))
             return {
                 'code': 200, 'msg': 'Token刷新成功',
                 'data': {
-                    'token': cls._token,
+                    'token': cls._get_token(),
                     'expires_in': data.get('expires_in', 86400),
                 }
             }
         return cls._to_c_format(result)
 
-    @classmethod
-    def logout(cls):
-        """登出（清空本地缓存）"""
-        cls._token = None
-        cls._user_info = None
-        return {'code': 200, 'msg': '登出成功', 'data': None}
-
-    @classmethod
-    def set_token(cls, token):
-        """从外部设置token（session恢复时）"""
-        cls._token = token
-
-    @classmethod
-    def get_token(cls):
-        return cls._token
-
-    @classmethod
-    def get_user_info(cls):
-        return cls._user_info
 
     # =========================================================================
     # 报警事件
@@ -402,17 +425,33 @@ class APIBridge:
         cam_fault_result = cls._get('faults/camera', params={'per_page': 1})
         box_fault_result = cls._get('faults/device', params={'per_page': 1})
 
-        total_cameras = cameras_result.get('data', {}).get('total', 0)
-        total_boxes = devices_result.get('data', {}).get('total', 0)
-        fault_cameras = cam_fault_result.get('data', {}).get('total', 0) if cam_fault_result.get('code') == 200 else 0
-        fault_boxes = box_fault_result.get('data', {}).get('total', 0) if box_fault_result.get('code') == 200 else 0
-        total_alarms = alarms_result.get('data', {}).get('total', 0)
-        pending_alarms = int(summary_result.get('data', {}).get('pending_count', 0)) if summary_result.get('code') == 200 else 0
+        total_cameras = (cameras_result.get('data') or {}).get('total', 0)
+        total_boxes = (devices_result.get('data') or {}).get('total', 0)
+        fault_cameras = (cam_fault_result.get('data') or {}).get('total', 0) if cam_fault_result.get('code') == 200 else 0
+        fault_boxes = (box_fault_result.get('data') or {}).get('total', 0) if box_fault_result.get('code') == 200 else 0
 
-        # 今日告警 = 当日故障数（camera + device）
-        cam_stats = cam_fault_result.get('data', {}).get('stats', {}) if cam_fault_result.get('code') == 200 else {}
-        box_stats = box_fault_result.get('data', {}).get('stats', {}) if box_fault_result.get('code') == 200 else {}
-        today_alarms = cam_stats.get('today', 0) + box_stats.get('today', 0)
+        # ★ 故障摄像头报警过滤：故障摄像头无法检测火情，其报警不计入统计
+        if fault_cameras > 0:
+            filtered_summary = cls._get('statistics', params={
+                'dimension': 'summary', 'exclude_fault_camera': '1'
+            })
+            if filtered_summary.get('code') == 200:
+                fs = filtered_summary.get('data', {})
+                total_alarms = fs.get('total', 0)
+                pending_alarms = fs.get('pending_count', 0)
+                today_alarms = fs.get('today_count', 0)
+            else:
+                # Fallback to original values
+                total_alarms = (alarms_result.get('data') or {}).get('total', 0)
+                pending_alarms = int((summary_result.get('data') or {}).get('pending_count', 0)) if summary_result.get('code') == 200 else 0
+                today_alarms = 0
+        else:
+            # 无故障摄像头，使用原始统计
+            total_alarms = (alarms_result.get('data') or {}).get('total', 0)
+            pending_alarms = int((summary_result.get('data') or {}).get('pending_count', 0)) if summary_result.get('code') == 200 else 0
+            cam_stats = (cam_fault_result.get('data') or {}).get('stats', {}) if cam_fault_result.get('code') == 200 else {}
+            box_stats = (box_fault_result.get('data') or {}).get('stats', {}) if box_fault_result.get('code') == 200 else {}
+            today_alarms = cam_stats.get('today', 0) + box_stats.get('today', 0)
 
         # 本月报警数（从summary获取当月数据）
         month_alarms = 0
@@ -420,7 +459,7 @@ class APIBridge:
             'start_time': datetime.now().strftime('%Y-%m-01 00:00:00'),
             'end_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
         if result.get('code') == 200:
-            month_alarms = result.get('data', {}).get('total', 0)
+            month_alarms = (result.get('data') or {}).get('total', 0)
 
         return {
             'code': 200, 'msg': 'success',
@@ -532,7 +571,21 @@ class APIBridge:
         result = cls._get('logs/access', params=params)
         if result.get('code') == 200:
             data = result.get('data', {})
-            data['items'] = data.get('items', []) or data.get('list', [])
+            raw_list = data.get('items', []) or data.get('list', [])
+            # Map DB fields to frontend expected fields
+            mapped = []
+            for item in raw_list:
+                mapped.append({
+                    'id': item.get('Id'),
+                    'username': item.get('Username') or ('User#' + str(item.get('UserId', ''))),
+                    'ip_address': item.get('IP', ''),
+                    'request_method': item.get('Method', ''),
+                    'request_url': item.get('Url', ''),
+                    'response_code': 200,
+                    'duration_ms': '-',
+                    'created_at': item.get('CreateTime', ''),
+                })
+            data['items'] = mapped
             data.setdefault('pages', max(1, math.ceil(
                 data.get('total', 0) / max(1, per_page)
             )))
@@ -551,7 +604,20 @@ class APIBridge:
         result = cls._get('logs/operation', params=params)
         if result.get('code') == 200:
             data = result.get('data', {})
-            data['items'] = data.get('items', []) or data.get('list', [])
+            raw_list = data.get('items', []) or data.get('list', [])
+            # Map DB fields to frontend expected fields
+            mapped = []
+            for item in raw_list:
+                mapped.append({
+                    'id': item.get('Id'),
+                    'username': item.get('Username') or ('User#' + str(item.get('UserId', ''))),
+                    'operation_type': item.get('Type', ''),
+                    'operation_module': item.get('MenuName', ''),
+                    'operation_desc': item.get('ContentNew', ''),
+                    'ip_address': item.get('IP', ''),
+                    'created_at': item.get('CreateTime', ''),
+                })
+            data['items'] = mapped
             data.setdefault('pages', max(1, math.ceil(
                 data.get('total', 0) / max(1, per_page)
             )))

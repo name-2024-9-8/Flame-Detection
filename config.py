@@ -35,7 +35,7 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = 86400  # 24小时
 
     # ★ 融合模式：王永林的PHP API基地址
-    PHP_API_BASE = os.environ.get('PHP_API_BASE', 'http://localhost:8080/index.php/api')
+    PHP_API_BASE = os.environ.get('PHP_API_BASE', 'http://127.0.0.1:8080/index.php/api')
 
     # ★ 融合模式开关：True=使用B的PHP API，False=使用本地SQLite（兼容开发/演示）
     FUSION_MODE = os.environ.get('FUSION_MODE', 'true').lower() in ('true', '1', 'yes')

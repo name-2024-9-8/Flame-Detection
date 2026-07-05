@@ -1,15 +1,37 @@
-# 视频AI智能识别及预警管理信息系统
+# 视频AI智能识别及预警管理信息系统 — 火焰识别
 
-基于 YOLO11-nano 的火焰/烟尘实时检测与预警管理系统，三方协作完成。
+> **FlameDetection_1.0** | 融合架构：Flask → PHP API → MySQL | 高德地图GIS数据大屏
+
+---
+
+## 人员信息
+
+| 角色 | 姓名 | 工号 |
+|------|------|------|
+| 人员C · 前端开发与质量保障 | **段林川** | **12309040309** |
+| 人员B · 后端API桥接 | 王永林 | — |
+| 人员A · AI边缘检测 | 郭俊奇 | — |
+
+---
+
+## 版本信息
+
+| 项目 | 内容 |
+|------|------|
+| **版本号** | FlameDetection_1.0 |
+| **创建时间** | 2026-06-11 |
+| **上传时间** | 2026-07-06 |
+| **分支** | `abc/duanlinchuan/FlameDetection_1.0` |
+
+---
 
 ## 架构概览
 
 ```
 ┌─────────────────────┐     RTSP视频流      ┌──────────────────────────┐
 │   摄像头 (海康/大华)  │ ─────────────────→  │  Orange Pi 5 (RK3588S)   │
-│                     │                     │  edge-ai/edge/run.py     │
-└─────────────────────┘                     │  YOLO11-nano NPU 推理    │
-                                            └────────────┬─────────────┘
+│                     │                     │  YOLO11-nano NPU 推理    │
+└─────────────────────┘                     └────────────┬─────────────┘
                                                          │ HTTP POST
                                                          ↓
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -27,203 +49,173 @@
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-## 人员分工
+---
 
-| 人员 | 负责模块 | 核心内容 |
-|------|---------|---------|
-| **A · 郭俊奇** | AI边缘检测 | YOLO11训练/推理、视频采集、时域滤波、GPS定位、Orange Pi 5部署 |
-| **B · 王永林** | 后端+数据库 | PHP RESTful API、MySQL 15表设计、JWT认证、设备/报警/日志CRUD |
-| **C · 段林川** | 前端Web | Flask + 17页面、地图可视化、API桥接代理 |
+## FlameDetection_1.0 版本内容
 
-## 目录结构
+### 1. GIS数据大屏 — 三层独立标记系统
 
-```
-backed/
-├── app.py                      # Flask 主入口 (端口 5000)
-├── config.py                   # Flask 配置 (含 EDGE_API_KEY)
-├── api_bridge.py               # Flask ↔ PHP API 桥接层
-├── models.py                   # 数据模型 (融合模式下通过API桥接)
-├── requirements.txt            # Python依赖
-│
-├── routes/                     # Flask 路由蓝本
-│   ├── __init__.py             #   路由注册
-│   ├── auth.py                 #   认证 (登录/登出)
-│   ├── main.py                 #   页面路由 (17页面)
-│   ├── api.py                  #   管理API代理 (CRUD)
-│   └── detect.py               #   ★ 边缘检测API代理 (A↔B, 含X-API-Key认证)
-│
-├── templates/                  # Jinja2 模板 (17个页面)
-│   ├── index.html              #   数据大屏
-│   ├── dashboard.html          #   仪表盘
-│   ├── login.html              #   登录页
-│   ├── alarm/                  #   报警事件相关
-│   ├── device/                 #   设备管理
-│   ├── system/                 #   系统管理
-│   └── log/                    #   日志查询
-│
-├── static/                     # 前端静态资源
-│   ├── css/app.css
-│   └── js/app.js
-│
-├── web/                        # PHP 后端 (CodeIgniter 3, 端口 8080)
-│   ├── index.php               #   PHP 入口
-│   ├── application/
-│   │   ├── config/
-│   │   │   ├── routes.php      #   ★ API 路由映射
-│   │   │   └── database.php    #   MySQL 连接配置
-│   │   ├── controllers/api/
-│   │   │   ├── Auth.php        #   认证 API
-│   │   │   ├── Alarm.php       #   报警 CRUD
-│   │   │   ├── Device.php      #   设备 CRUD
-│   │   │   ├── Detect.php      #   ★ 边缘数据接入 (M7新增)
-│   │   │   ├── Statistics.php  #   统计分析
-│   │   │   ├── Export.php      #   Excel/Word 导出
-│   │   │   ├── Log.php         #   日志查询
-│   │   │   └── WebService.php  #   第三方对接
-│   │   ├── models/             #   数据模型层
-│   │   └── core/
-│   │       └── REST_Controller.php  # REST 基类 (JWT/限流/日志)
-│   ├── database/
-│   │   └── 001_create_tables.sql    # 15张表建表语句 + 种子数据
-│   └── vendor/                 #   Composer 依赖
-│
-└── edge-ai/                    # ★ 郭俊奇 · 边缘AI模块 (M7集成)
-    ├── main.py                 #   统一入口 (train/eval/calib/deploy)
-    ├── config.py               #   AI模型配置
-    ├── edge/
-    │   ├── run.py              #   边缘端启动入口
-    │   ├── pipeline.py         #   主控管线 (采集→推理→滤波→报警)
-    │   ├── output_module.py    #   HTTP POST 结果发布器
-    │   ├── inference_engine.py #   推理引擎 (RKNN/ONNX/PyTorch)
-    │   ├── preprocessing.py    #   暗通道去雾 + CLAHE增强
-    │   ├── temporal_filter.py  #   时域滤波 (滑动窗口投票)
-    │   ├── video_stream.py     #   RTSP 视频流接入
-    │   └── hardware_utils.py   #   NPU/GPIO 工具
-    ├── localization/           #   GPS定位模块
-    ├── train_yolo.py           #   YOLO11 训练
-    ├── convert_rknn.py         #   ONNX → RKNN 转换
-    ├── deploy_orangepi5.sh     #   Orange Pi 5 一键部署
-    └── edge_config.template.json  # 边缘端配置模板
-```
+基于高德地图 AMap JSAPI v2.0，3D视角，重庆市中心默认视野（zoom 14）。8个摄像头分散在四个象限，均可见。
+
+**三层标记互不重叠覆盖：**
+
+| 图层 | 图标 | 数量 | 说明 |
+|------|------|------|------|
+| 🔴 报警事件标记 | 红色🔥火焰 | **4** | 正常摄像头检测到火焰，变为此标记 |
+| 🔵 监控摄像头标记 | 蓝色📷摄像头 | **2** | 正常运行，无报警无故障 |
+| ⚠️ 故障摄像头标记 | 红色⚠警告 | **2** | 设备故障，无法检测火情 |
+
+**交互功能：**
+- 点击标记弹出详细信息窗口（设备信息、报警级别、故障描述等）
+- 右侧按钮独立切换各图层显示/隐藏
+- 徽章数字与地图实际标记数一一对应
+- 底部实时报警滚动条
+
+### 2. 左侧统计面板
+
+| 统计项 | 说明 |
+|--------|------|
+| 监控摄像头（8） | 全部摄像头总数 |
+| AI智能云盒（2） | 全部AI云盒 |
+| 累计报警事件（4） | 按摄像头去重的报警事件数（非报警记录数） |
+| 今日识别率 | 已处理/总报警比率 |
+
+### 3. 故障摄像头智能处理
+
+- **报警过滤**：故障摄像头的报警事件不计入统计面板（因摄像头损坏无法检测火情）
+- **一键修复**：点击地图上的故障标记，弹出信息窗口显示"🔧 一键修复"按钮，点击即完成修复
+- **自动恢复**：修复后故障标记消失→变为蓝色摄像头标记，其报警事件自动可见并计入统计
+- 修复API链路：`地图JS → Flask PUT /api/v1/camera-faults/{id}/repair → PHP → MySQL DELETE`
+
+### 4. 报警事件按摄像头去重
+
+- 同一摄像头多条检测记录（如多次检测到火焰）归并为**1个报警标记**
+- 累计报警事件 = 有报警的不同摄像头数
+- 面板数字、按钮徽章、地图标记数三者完全一致
+
+### 5. 设备管理后台
+
+- 摄像头 CRUD（增删改查，含经纬度坐标）
+- AI智能云盒管理
+- 系统配置（高德地图Key/安全密钥、JWT密钥、报警阈值等）
+- 用户/角色/部门/数据字典管理
+- 报警事件审核（处理/驳回）
+- 访问日志/操作日志
+
+### 6. 边缘AI检测API
+
+| 方法 | 路径 | 认证 |
+|------|------|------|
+| POST | `/api/detect/alarm` | X-API-Key |
+| POST | `/api/detect/upload` | X-API-Key |
+| POST | `/api/device/heartbeat` | X-API-Key |
+| POST | `/api/device/error` | X-API-Key |
+
+---
+
+## 界面截图
+
+> 登录地址：`http://127.0.0.1:5000/`，账号：`admin / 123456`
+
+### 数据大屏全貌
+
+<!-- TODO: 添加截图 — 完整GIS大屏，含8个地图标记（4🔥+2📷+2⚠）、左侧统计面板、右侧图层按钮、底部滚动条 -->
+
+### 故障摄像头标记 + 一键修复
+
+<!-- TODO: 添加截图 — 点击杨家坪/冉家坝的红色⚠标记，弹出信息窗口显示"🔧 一键修复"按钮 -->
+
+### 报警事件标记（火灾检测）
+
+<!-- TODO: 添加截图 — 红色🔥火焰标记跳动动画，分布在解放碑、朝天门、江北嘴、南滨路 -->
+
+### 图层独立切换
+
+<!-- TODO: 添加截图 — 点击右侧按钮分别切换报警层/摄像头层/故障层的显示与隐藏 -->
+
+### 管理后台仪表盘
+
+<!-- TODO: 添加截图 — ECharts统计图表：30天趋势、级别分布、区域统计 -->
+
+---
+
+## 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 前端框架 | Flask + Jinja2 + Bootstrap 5 |
+| 地图引擎 | 高德地图 AMap JSAPI v2.0 |
+| 图表 | ECharts 5 |
+| 后端桥接 | Python requests + JWT |
+| 数据源 | PHP CodeIgniter 3 (端口8080) |
+| 数据库 | MySQL 8.0 (flame_detection, 15表) |
+| 边缘AI | ONNX Runtime + YOLO11-nano (Orange Pi 5 NPU) |
+
+---
 
 ## 快速启动
 
-### 环境要求
-
-- PHP 5.6+ (CodeIgniter 3)
-- Python 3.10+ (Flask)
-- MySQL 5.7+
-- Redis (可选，用于限流)
-
-### 启动步骤
-
-**终端1 — PHP 后端 (端口 8080)**
-
 ```bash
-# Git Bash / CMD:
-D:\php83\php-5.6.8\php.exe -c D:\php83\php-5.6.8\php.ini -S localhost:8080 -t web
+# 1. 启动PHP API服务（Python替代版，端口8080）
+python php_alt_server.py
 
-# PowerShell:
-D:\php83\php-5.6.8\php.exe -c D:\php83\php-5.6.8\php.ini -S localhost:8080 -t D:\BaiduNetdiskDownload\backed\web
-```
+# 2. 初始化数据库（首次运行）
+python seed_data.py
+python add_cameras.py
+python add_faulty_cameras.py
 
-**终端2 — Flask 前端 (端口 5000)**
-
-```bash
-cd D:\BaiduNetdiskDownload\backed
+# 3. 启动Flask应用（端口5000）
 python app.py
+
+# 4. 浏览器访问
+# http://127.0.0.1:5000/
+# 登录: admin / 123456
 ```
 
-**终端3 — 边缘AI (可选，仅Orange Pi 5)**
+---
 
-```bash
-cd edge-ai
-python main.py edge-run
+## 项目结构
+
+```
+FlameDetection/
+├── app.py                 # Flask主应用入口
+├── api_bridge.py          # PHP API桥接层（JWT + 字段映射）
+├── php_alt_server.py      # Python替代PHP服务器（端口8080）
+├── config.py              # 系统配置
+├── models.py              # ORM模型定义
+├── routes/
+│   ├── __init__.py        # 蓝图注册
+│   ├── main.py            # 页面路由（GIS大屏 / 仪表盘）
+│   ├── api.py             # RESTful API（/api/v1/）
+│   ├── auth.py            # 认证路由
+│   └── detect.py          # 边缘AI检测API
+├── templates/
+│   ├── index.html         # GIS数据大屏（核心页面）
+│   ├── dashboard.html     # 管理仪表盘
+│   └── ...                # 设备/报警/系统管理模板
+├── static/
+│   ├── css/app.css
+│   ├── js/app.js
+│   └── lib/               # Bootstrap / ECharts / LayUI
+├── seed_data.py           # 数据库初始化种子
+├── add_cameras.py         # 添加正常摄像头
+├── add_faulty_cameras.py  # 添加故障摄像头 + 报警事件
+├── test_all.py            # 集成测试
+└── README.md
 ```
 
-### 访问地址
-
-| 地址 | 说明 |
-|------|------|
-| http://localhost:5000 | 数据大屏 |
-| http://localhost:5000/login | 登录页 (admin / 123456) |
-| http://localhost:5000/dashboard | 管理仪表盘 |
-| http://localhost:5000/health | Flask 健康检查 |
-| http://localhost:8080/index.php/api/statistics/health | PHP 健康检查 |
-
-## API 端点汇总
-
-### 管理端 API (需 JWT)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/v1/token` | 登录获取Token |
-| GET | `/api/v1/alarm-events` | 报警列表 |
-| GET | `/api/v1/alarm-events/<id>` | 报警详情 |
-| PUT | `/api/v1/alarm-events/<id>/process` | 处理/审核报警 |
-| GET/POST/PUT/DELETE | `/api/v1/cloudboxes` | AI云盒 CRUD |
-| GET/POST/PUT/DELETE | `/api/v1/cameras` | 摄像头 CRUD |
-| GET | `/api/v1/statistics/*` | 统计分析 |
-
-### 边缘设备 API (需 X-API-Key)
-
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| POST | `/api/detect/alarm` | 报警事件上报 | X-API-Key |
-| POST | `/api/detect/upload` | 视频文件上传 | X-API-Key |
-| POST | `/api/device/heartbeat` | 设备心跳保活 | X-API-Key |
-| POST | `/api/device/error` | 设备故障上报 | X-API-Key |
-
-**边缘API密钥**: `flame-edge-2026-secure-key` (通过 `X-API-Key` 请求头传递)
-
-## 快速验证
-
-```bash
-# 1. 登录
-python -c "import requests; r=requests.post('http://localhost:5000/api/v1/token',json={'username':'admin','password':'123456'}); print(r.json()['code'])"
-
-# 2. 边缘报警 (需密钥)
-python -c "import requests; r=requests.post('http://localhost:5000/api/detect/alarm',json={'device_id':1,'camera_id':1,'event_type':'fire','confidence':0.95},headers={'X-API-Key':'flame-edge-2026-secure-key'}); print(r.status_code)"
-
-# 3. 无密钥应被拒绝
-python -c "import requests; r=requests.post('http://localhost:5000/api/detect/alarm',json={'device_id':1}); print(r.status_code)"
-```
-
-预期输出: `200` → `201` → `401`
-
-## 关键技术指标
-
-| 指标 | 目标 | 实际 |
-|------|------|------|
-| AI识别率 (mAP@50) | ≥90% | 90.63% |
-| 模型大小 | <10MB | 5.48MB |
-| 推理时延 | ≤2s | 45ms (NPU) |
-| 定位误差 | ≤200m | 依赖标定精度 |
-| 误报率 (经时域滤波) | <5% | 通过5帧3投票降至~0.7% |
-| 并发摄像头 | 30路 | — |
-
-## 数据库表 (15张)
-
-`T_Site` `T_Role` `T_Authority` `T_UserRole` `T_Dictionary` `T_Branch` `T_Area` `T_User` `T_Device` `T_Camera` `T_DetectResult` `T_CameraError` `T_DeviceError` `T_OperateLog` `T_AccessLog`
-
-## 安全设计
-
-| 层级 | 机制 |
-|------|------|
-| Flask 代理层 | X-API-Key 共享密钥 (边缘API) |
-| PHP API 层 | JWT (管理API) / device_id+MAC 验证 (边缘API) |
-| 数据库 | bcrypt 密码哈希 |
-| 传输 | CORS 白名单、X-Frame-Options、X-Content-Type-Options |
+---
 
 ## 里程碑
 
 | 阶段 | 内容 | 分支 |
 |------|------|------|
-| M1-M4 | 数据库设计、基础API、文档导出、WebService | `backend/wangyonglin` |
+| M1-M4 | 数据库设计、基础API、文档导出 | `backend/wangyonglin` |
 | M5 | 安全加固 + 前端页面 | `fusion/backend-frontend` |
 | M6 | B+C 前后端融合 (Flask↔PHP桥接) | `fusion/backend-frontend` |
-| **M7** | **A+B+C 三方融合 (边缘AI集成)** | **`fusion/abc-integration`** ← 当前 |
+| M7 | A+B+C 三方融合 (边缘AI集成) | `fusion/abc-integration` |
+| **1.0** | **故障摄像头标记 + 报警过滤 + 一键修复 + 去重统计** | **`abc/duanlinchuan/FlameDetection_1.0`** |
 
 ---
 
-> 开发环境: Windows 11 · Python 3.13 · PHP 5.6.8 · MySQL 8.0 · Redis · CodeIgniter 3 · Flask 3.1
+> 开发环境: Windows 11 · Python 3.13 · MySQL 8.0 · Flask 3.1 · CodeIgniter 3

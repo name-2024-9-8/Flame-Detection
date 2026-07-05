@@ -94,6 +94,30 @@ def index():
     # 合并两种故障数据，统一传给大屏
     fault_data = cam_faults + box_faults
 
+    # ★ 计算地图三层标记数量（互不重叠，按摄像头位置独立计数）
+    # 故障摄像头ID
+    fault_cam_ids = set()
+    for f in fault_data:
+        cam_ref = f.get('camera') if isinstance(f.get('camera'), dict) else {}
+        if cam_ref.get('id'):
+            fault_cam_ids.add(cam_ref['id'])
+
+    # 报警事件涉及的摄像头ID（全部，含故障的）
+    alarm_cam_ids = set()
+    for a in alarm_list:
+        cid = a.get('camera_id')
+        if cid:
+            alarm_cam_ids.add(cid)
+
+    # 🔴 报警事件标记数：有报警 且 非故障的摄像头数（地图上红色🔥标记）
+    alarm_marker_count = len(alarm_cam_ids - fault_cam_ids)
+
+    # 🔵 监控摄像头标记数：无故障 且 无报警的摄像头数（地图上蓝色标记）
+    normal_marker_count = sum(
+        1 for c in camera_list
+        if c.get('id') not in fault_cam_ids and c.get('id') not in alarm_cam_ids
+    )
+
     # 最近7天报警趋势
     alarm_by_date = _success_or_empty(bridge.statistics_by_date(days=7)) or []
     if isinstance(alarm_by_date, list):
@@ -115,6 +139,8 @@ def index():
         total_alarms=total_alarms,
         pending_alarms=pending_alarms,
         today_alarms=today_alarms,
+        alarm_marker_count=alarm_marker_count,
+        normal_marker_count=normal_marker_count,
         camera_list_json=json.dumps(camera_list, ensure_ascii=False),
         alarm_list_json=json.dumps(alarm_list, ensure_ascii=False),
         fault_camera_json=json.dumps(fault_data, ensure_ascii=False),

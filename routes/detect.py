@@ -10,7 +10,7 @@
 from flask import Blueprint, request, jsonify, current_app
 import requests
 
-PHP_API_BASE = 'http://localhost:8080/index.php/api'
+PHP_API_BASE = 'http://127.0.0.1:8080/index.php/api'
 detect_bp = Blueprint('detect', __name__, url_prefix='/api')
 
 
