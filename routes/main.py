@@ -85,11 +85,8 @@ def index():
     # 摄像头列表（地图标注）
     camera_list = _list_items(bridge.camera_list(per_page=500))
 
-    # 报警事件列表（最近50条，地图弹窗）
-    alarm_list = _list_items(bridge.alarm_list(per_page=50))
-
-    # 全量报警历史（按camera_id分组，供摄像头弹窗历史查询）
-    alarm_history = _list_items(bridge.alarm_list(per_page=1000))
+    # 报警事件列表（全量，供地图弹窗和历史查询）
+    alarm_list = _list_items(bridge.alarm_list(per_page=1000))
 
     # 故障摄像头（数据大屏地图标注）
     cam_faults = _list_items(bridge.camera_fault_list(per_page=200))
@@ -146,7 +143,6 @@ def index():
         normal_marker_count=normal_marker_count,
         camera_list_json=json.dumps(camera_list, ensure_ascii=False),
         alarm_list_json=json.dumps(alarm_list, ensure_ascii=False),
-        alarm_history_json=json.dumps(alarm_history, ensure_ascii=False),
         fault_camera_json=json.dumps(fault_data, ensure_ascii=False),
         alarm_by_date_json=json.dumps(alarm_by_date, ensure_ascii=False),
         region_data_json=json.dumps(region_data, ensure_ascii=False),
@@ -311,6 +307,44 @@ def alarm_review():
     result = bridge.alarm_list(per_page=50, status='1')  # 审核页加载待处理(status=1)的报警
     events = _list_items(result)
     return render_template('alarm/review.html', events=events)
+
+
+@main_bp.route('/alarm/detail/<int:event_id>')
+@login_required
+def alarm_event_detail(event_id):
+    """报警事件详情页 — 摄像头属性 + 烟源属性 + 取证视频 + 处理流程"""
+    user = get_current_user()
+    bridge = _get_bridge()
+
+    # 获取报警详情
+    detail_result = bridge.alarm_detail(event_id)
+    if detail_result.get('code') != 200:
+        from flask import flash, redirect, url_for
+        flash('报警事件不存在', 'danger')
+        return redirect(url_for('main.alarm_event'))
+
+    alarm = detail_result.get('data', {})
+
+    # 获取关联摄像头信息
+    camera = {}
+    if alarm.get('camera_id'):
+        cam_list = _list_items(bridge.camera_list(per_page=500))
+        camera = next((c for c in cam_list if c.get('id') == alarm.get('camera_id')), {})
+
+    # 获取该摄像头的历史报警（已处理的）
+    all_alarms = _list_items(bridge.alarm_list(per_page=1000))
+    cam_history = [a for a in all_alarms
+                   if a.get('camera_id') == alarm.get('camera_id') and a.get('id') != event_id]
+    # 去重：仅保留已处理的报警
+    processed_history = [a for a in cam_history if a.get('process_status') == 3]
+
+    return render_template(
+        'alarm/detail.html',
+        alarm=alarm,
+        camera=camera,
+        history=processed_history[:10],
+        user=user,
+    )
 
 
 @main_bp.route('/alarm/camera-fault')

@@ -641,7 +641,6 @@
     // 后端数据
     const cameraData = {{ camera_list_json | safe }};
     const alarmData = {{ alarm_list_json | safe }};
-    const alarmHistory = {{ alarm_history_json | safe }};
     const faultData = {{ fault_camera_json | safe }};
     const alarmByDate = {{ alarm_by_date_json | safe }};
     const regionData = {{ region_data_json | safe }};
@@ -896,7 +895,7 @@
 
     // ===== v1.1 辅助：获取指定摄像头的所有历史报警 =====
     function getCameraAlarms(cameraId) {
-        return alarmHistory.filter(a => a.camera_id === cameraId);
+        return alarmData.filter(a => a.camera_id === cameraId);
     }
 
     // ===== v1.1 辅助：渲染摄像头属性HTML块 =====
@@ -1053,15 +1052,17 @@
         currentInfoWindow.open(map, marker.getPosition());
     }
 
-    // ===== v1.1 报警信息窗口（增强版：摄像头属性 + 烟源属性 + 视频 + 处理流程）=====
+    // ===== v1.1 报警信息窗口（简洁版：基本信息 + 查看详情按钮）=====
     function showAlarmInfoWindow(marker) {
         if (currentInfoWindow) { currentInfoWindow.close(); }
         const alarm = marker.getExtData();
         if (!alarm) return;
 
-        // 查找关联的摄像头
         const cam = findCamera(alarm.camera_id);
         const camName = cam.device_name || alarm.camera_name || '未知摄像头';
+        const confidence = alarm.detection_confidence ? (alarm.detection_confidence * 100).toFixed(1) + '%' : '-';
+        const lng = alarm.longitude ? Number(alarm.longitude).toFixed(6) : '-';
+        const lat = alarm.latitude ? Number(alarm.latitude).toFixed(6) : '-';
 
         const content = `
             <div class="amap-info-window-wide">
@@ -1069,14 +1070,20 @@
                     <span>🔥</span> ${alarm.event_type_name || '火焰报警'} — ${camName}
                 </div>
                 <div class="iw-body">
-                    ${Object.keys(cam).length > 0 ? renderCameraProps(cam) : ''}
-                    ${renderSmokeSource(alarm)}
-                    ${renderVideoSection(alarm.video_url)}
-                    ${renderProcessTimeline(alarm)}
+                    <div class="iw-detail">
+                        <div class="iw-row"><span class="label">事件编号</span><span class="value">${alarm.event_code || '-'}</span></div>
+                        <div class="iw-row"><span class="label">报警级别</span><span class="value" style="color:#e74c3c;font-weight:700;">${alarm.alarm_level_name || '-'}</span></div>
+                        <div class="iw-row"><span class="label">AI置信度</span><span class="value">${confidence}</span></div>
+                        <div class="iw-row"><span class="label">检测时间</span><span class="value">${alarm.detected_at || '-'}</span></div>
+                        <div class="iw-row"><span class="label">位置描述</span><span class="value">${alarm.location_description || '-'}</span></div>
+                        <div class="iw-row"><span class="label">经纬度</span><span class="value">${lng}, ${lat}</span></div>
+                        <div class="iw-row"><span class="label">处理状态</span><span class="value">${alarm.process_status_name || '-'}</span></div>
+                        ${cam.device_name ? `<div class="iw-row"><span class="label">关联摄像头</span><span class="value">${cam.device_name}</span></div>` : ''}
+                    </div>
                     <div class="iw-actions">
                         <button onclick="currentInfoWindow.close(); map.setZoomAndCenter(16, [${alarm.longitude}, ${alarm.latitude}]);"
                                 class="iw-btn secondary">📍 定位</button>
-                        <a href="/alarm/review" class="iw-btn primary" target="_blank">查看详情 →</a>
+                        <a href="/alarm/detail/${alarm.id}" class="iw-btn primary" target="_blank">查看详情 →</a>
                     </div>
                 </div>
             </div>

@@ -357,6 +357,22 @@ def alarm_events():
     })
 
 
+@app.route('/index.php/api/alarm/events/<int:event_id>', methods=['GET'])
+@login_required
+def alarm_detail(event_id):
+    """获取单个报警事件详情"""
+    row = query("""
+        SELECT dr.*, c.Name as CameraName, d.Address as DeviceAddress
+        FROM T_DetectResult dr
+        LEFT JOIN T_Camera c ON dr.CameraId = c.Id
+        LEFT JOIN T_Device d ON dr.DeviceId = d.Id
+        WHERE dr.Id = %s
+    """, (event_id,), single=True)
+    if not row:
+        return error('事件不存在', 404)
+    return success(row)
+
+
 @app.route('/index.php/api/alarm/events/<int:event_id>/update', methods=['POST'])
 @login_required
 def alarm_update(event_id):
