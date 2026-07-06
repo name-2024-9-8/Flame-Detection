@@ -19,8 +19,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 PROJECT_ROOT = Path(__file__).parent
 
 # 输入路径 (YOLO11 ONNX)
-YOLO_ONNX = PROJECT_ROOT / "output" / "yolo_train" / "weights" / "best.onnx"
-LEGACY_ONNX = PROJECT_ROOT / "output" / "export" / "smoke_detector.onnx"
+YOLO_ONNX = PROJECT_ROOT / "output" / "yolo_train_7videos" / "weights" / "best.onnx"
+LEGACY_ONNX = PROJECT_ROOT / "output" / "yolo_train" / "weights" / "best.onnx"
 
 # 输出路径
 RKNN_FP16 = PROJECT_ROOT / "output" / "export" / "smoke_detector_fp16.rknn"
@@ -269,7 +269,7 @@ def export_onnx_from_yolo():
     if YOLO_ONNX.exists():
         return True
 
-    best_pt = PROJECT_ROOT / "output" / "yolo_train" / "weights" / "best.pt"
+    best_pt = PROJECT_ROOT / "output" / "yolo_train_7videos" / "weights" / "best.pt"
     if not best_pt.exists():
         print("[错误] YOLO11 best.pt 不存在, 请先训练: python train_yolo.py")
         return False

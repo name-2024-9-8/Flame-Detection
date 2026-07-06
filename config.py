@@ -24,7 +24,7 @@ VAL_LABEL_DIR = DATASET_DIR / "labels/val"
 NUM_CLASSES = 1               # fire_smoke 单类, 与 data/smoke_dataset/data.yaml 一致
 
 # ========== YOLO11 ==========
-YOLO_MODEL_DIR = OUTPUT_DIR / "yolo_train" / "weights"
+YOLO_MODEL_DIR = OUTPUT_DIR / "yolo_train_7videos" / "weights"
 YOLO_BEST_PT = YOLO_MODEL_DIR / "best.pt"
 YOLO_PRETRAINED_PT = OUTPUT_DIR / "yolo11n.pt"
 

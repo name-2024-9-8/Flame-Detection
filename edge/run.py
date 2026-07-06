@@ -143,11 +143,11 @@ def auto_select_model(cfg: dict, backend: str) -> str:
             return str(rknn_path)
 
     if backend in ('onnx', 'pytorch'):
-        onnx_path = PROJECT_ROOT / "output" / "yolo_train" / "weights" / "best.onnx"
+        onnx_path = PROJECT_ROOT / "output" / "yolo_train_7videos" / "weights" / "best.onnx"
         if onnx_path.exists():
             return str(onnx_path)
 
-        pt_path = PROJECT_ROOT / "output" / "yolo_train" / "weights" / "best.pt"
+        pt_path = PROJECT_ROOT / "output" / "yolo_train_7videos" / "weights" / "best.pt"
         if pt_path.exists() and backend == 'pytorch':
             return str(pt_path)
 

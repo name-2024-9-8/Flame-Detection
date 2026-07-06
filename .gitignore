@@ -254,10 +254,10 @@ test/*.mp4
 output/checkpoints/
 output/export/
 output/yolo_eval_results.json
-# 所有训练目录的中间权重 (保留 best.pt)
+output/yolo_train_vp47/
+# 所有训练目录的中间权重 (保留 best.pt 和 best.onnx)
 output/*/weights/epoch*.pt
 output/*/weights/last.pt
-output/*/weights/best.onnx
 # 训练可视化
 output/*/*.png
 output/*/*.jpg

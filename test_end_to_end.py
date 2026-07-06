@@ -59,7 +59,7 @@ def load_val_data():
 def test_model_inference():
     try:
         from ultralytics import YOLO
-        model = YOLO("output/yolo_train/weights/best.pt")
+        model = YOLO("output/yolo_train_7videos/weights/best.pt")
     except Exception:
         print("[跳过] YOLO11 模型尚未训练完成")
         return None
@@ -155,7 +155,7 @@ def test_model_inference():
     print(f"误报率 (FPR):         {fpr*100:6.2f}%  (目标 < {MAX_FALSE_POSITIVE_RATE*100:.0f}%)  {'✅' if fpr < MAX_FALSE_POSITIVE_RATE else '❌'}")
     print(f"平均推理时延:         {avg_inference_ms:6.1f} ms  (目标 ≤ 2000ms)  {'✅' if avg_inference_ms <= 2000 else '❌'}")
     print(f"平均端到端时延:       {avg_e2e_ms:6.1f} ms")
-    print(f"模型大小:             {Path('output/yolo_train/weights/best.pt').stat().st_size/1e6:.2f} MB  (目标 < 10MB)")
+    print(f"模型大小:             {Path('output/yolo_train_7videos/weights/best.pt').stat().st_size/1e6:.2f} MB  (目标 < 10MB)")
 
     output_path = Path("output/test_results.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)

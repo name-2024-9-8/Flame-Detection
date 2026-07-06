@@ -235,7 +235,7 @@ deploy_project() {
         rsync -av --exclude '.venv' --exclude '__pycache__' --exclude '*.pyc' \
               --exclude '.git' --exclude '.idea' --exclude 'data/smoke_dataset' \
               --exclude '*.pt' --exclude '*.pth' --exclude '*.rknn' \
-              --exclude 'runs' --exclude 'output/yolo_train' \
+              --exclude 'runs' --exclude 'output/yolo_train' --exclude 'output/yolo_train_vp47' \
               --exclude 'edge_config.json' \
               ./ "$PROJECT_DIR/" 2>/dev/null || \
         cp -r ./* "$PROJECT_DIR/" 2>/dev/null || true
