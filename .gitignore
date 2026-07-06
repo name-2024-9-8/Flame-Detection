@@ -262,5 +262,8 @@ output/*/*.jpg
 output/*/args.yaml
 output/*/results.csv
 output/*/labels.jpg
+# 报警输出 (运行时生成)
+output/alarm_clips/
+output/alarm_events/
 # WorkBuddy 本地数据
 .workbuddy/
