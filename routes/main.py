@@ -88,6 +88,9 @@ def index():
     # 报警事件列表（最近50条，地图弹窗）
     alarm_list = _list_items(bridge.alarm_list(per_page=50))
 
+    # 全量报警历史（按camera_id分组，供摄像头弹窗历史查询）
+    alarm_history = _list_items(bridge.alarm_list(per_page=1000))
+
     # 故障摄像头（数据大屏地图标注）
     cam_faults = _list_items(bridge.camera_fault_list(per_page=200))
     box_faults = _list_items(bridge.cloudbox_fault_list(per_page=200))
@@ -143,6 +146,7 @@ def index():
         normal_marker_count=normal_marker_count,
         camera_list_json=json.dumps(camera_list, ensure_ascii=False),
         alarm_list_json=json.dumps(alarm_list, ensure_ascii=False),
+        alarm_history_json=json.dumps(alarm_history, ensure_ascii=False),
         fault_camera_json=json.dumps(fault_data, ensure_ascii=False),
         alarm_by_date_json=json.dumps(alarm_by_date, ensure_ascii=False),
         region_data_json=json.dumps(region_data, ensure_ascii=False),
