@@ -1,10 +1,11 @@
 """Seed database with initial data"""
+import os
 import pymysql
 
 # Connect via TCP
 conn = None
 for port in [3306, 3307]:
-    for pwd in ['', 'root', '123456', 'admin', 'Root123456', 'mysql']:
+    for pwd in [os.environ.get('MYSQL_PASSWORD', '')]:
         try:
             conn = pymysql.connect(host='127.0.0.1', port=port, user='root',
                                    password=pwd, charset='utf8mb4')
