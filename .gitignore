@@ -244,3 +244,25 @@ output/edge_cache/
 output/clips/
 logs/
 *.log
+
+# ===== 新增: 本轮训练产物 =====
+# 训练备份
+data/smoke_dataset_backup/
+# 测试视频
+test/*.mp4
+# 训练中间产物
+output/checkpoints/
+output/export/
+output/yolo_eval_results.json
+# 所有训练目录的中间权重 (保留 best.pt)
+output/*/weights/epoch*.pt
+output/*/weights/last.pt
+output/*/weights/best.onnx
+# 训练可视化
+output/*/*.png
+output/*/*.jpg
+output/*/args.yaml
+output/*/results.csv
+output/*/labels.jpg
+# WorkBuddy 本地数据
+.workbuddy/
