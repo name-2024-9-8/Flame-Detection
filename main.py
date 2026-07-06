@@ -23,6 +23,7 @@ AI模型:
   rknn           ONNX → RKNN 转换 (Orange Pi 5)
   edge-run       启动边缘端检测管线 (Orange Pi 5)
   edge-video     边缘端视频检测 (ONNX/RKNN, 无需摄像头)
+  flame-alarm    火焰识别报警推送 (图片+视频+位置)
   e2e            端到端集成测试
   video-test     视频文件火焰检测 (test/VP47.mp4)
 """
@@ -117,6 +118,13 @@ def cmd_edge_video():
     main()
 
 
+def cmd_flame_alarm():
+    import sys
+    from edge.flame_alarm import main
+    sys.argv = [sys.argv[0]] + sys.argv[2:]
+    main()
+
+
 def cmd_edge_run():
     import sys
     from edge.run import main
@@ -137,6 +145,7 @@ COMMANDS = {
     "edge-run":     ("启动边缘端检测管线 (Orange Pi 5)", cmd_edge_run),
     "e2e":          ("端到端集成测试", cmd_e2e),
     "edge-video":   ("边缘端视频检测 (ONNX/RKNN)", cmd_edge_video),
+    "flame-alarm":  ("火焰识别报警推送", cmd_flame_alarm),
     "video-test":   ("视频文件火焰检测", cmd_video_test),
 }
 

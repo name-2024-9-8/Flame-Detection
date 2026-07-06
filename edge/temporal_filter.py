@@ -102,7 +102,7 @@ class TemporalFilter:
                 num_detections=1,
             )
             self._current_event = event
-            logger.info(f"🔥 火焰事件触发! id={event.event_id}, "
+            logger.info(f"[FIRE] 火焰事件触发! id={event.event_id}, "
                         f"votes={fire_votes}/{self.cfg.window_size}, "
                         f"conf={avg_conf:.2f}")
             return event
@@ -129,7 +129,7 @@ class TemporalFilter:
         """结束当前事件"""
         if self._current_event:
             duration = time.time() - self._current_event.start_time
-            logger.info(f"🔥 火焰事件结束: id={self._current_event.event_id}, "
+            logger.info(f"[FIRE] 火焰事件结束: id={self._current_event.event_id}, "
                         f"持续={duration:.1f}s, "
                         f"检测次数={self._current_event.num_detections}")
             self._current_event.status = "ended"
