@@ -65,7 +65,7 @@ logger = logging.getLogger("FlameAlarm")
 TZ = timezone(timedelta(hours=8))
 
 # 类别颜色
-CLASS_COLORS = {0: (0, 165, 255)}  # fire_smoke → 橙色
+CLASS_COLORS = {0: (0, 0, 255), 1: (255, 165, 0)}  # fire→红色, smoke→橙色
 
 
 # ============================================================
@@ -225,7 +225,7 @@ def annotate_frame(frame: np.ndarray, detections: list[DetectionBox],
         cv2.rectangle(out,
                       (int(det.x1), int(det.y1)),
                       (int(det.x2), int(det.y2)), color, 2)
-        label = f"fire_smoke {det.confidence:.2f}"
+        label = f"{det.class_name} {det.confidence:.2f}"
         cv2.putText(out, label, (int(det.x1), max(int(det.y1) - 8, 15)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 

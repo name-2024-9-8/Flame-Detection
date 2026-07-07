@@ -71,7 +71,7 @@ class YOLOInferenceEngine:
     - 帧标注
     """
 
-    CLASS_NAMES = {0: "fire_smoke"}
+    CLASS_NAMES = {0: "fire", 1: "smoke"}
 
     def __init__(self, model_path: str, conf_threshold: float = 0.25,
                  iou_threshold: float = 0.5, img_size: int = 416):
@@ -184,7 +184,7 @@ class YOLOInferenceEngine:
             # 提取置信度和类别
             cls_scores = pred[:, 4:]
             cls_ids = np.argmax(cls_scores, axis=1)
-            confidences = np.max(cls_scores, axis=1) * pred[:, 4].max()  # 简化
+            confidences = np.max(cls_scores, axis=1) * pred[:, 4]
 
             for i in range(len(pred)):
                 if confidences[i] < self.conf_threshold:

@@ -23,10 +23,18 @@ VAL_LABEL_DIR = DATASET_DIR / "labels/val"
 # ========== 模型配置 ==========
 NUM_CLASSES = 1               # fire_smoke 单类, 与 data/smoke_dataset/data.yaml 一致
 
+# ========== D-Fire 数据集 ==========
+DFIRE_DIR = PROJECT_ROOT / "data" / "dfire"
+DFIRE_YAML = DFIRE_DIR / "data.yaml"
+
 # ========== YOLO11 ==========
 YOLO_MODEL_DIR = OUTPUT_DIR / "yolo_train_7videos" / "weights"
 YOLO_BEST_PT = YOLO_MODEL_DIR / "best.pt"
 YOLO_PRETRAINED_PT = OUTPUT_DIR / "yolo11n.pt"
+
+# D-Fire 训练的模型
+YOLO_DFIRE_DIR = OUTPUT_DIR / "dfire_train" / "weights"
+YOLO_DFIRE_PT = YOLO_DFIRE_DIR / "best.pt"
 
 # ========== 评估目标 ==========
 TARGET_RECALL = 0.90
