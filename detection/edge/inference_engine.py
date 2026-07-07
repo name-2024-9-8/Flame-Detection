@@ -184,7 +184,7 @@ class YOLOInferenceEngine:
             # 提取置信度和类别
             cls_scores = pred[:, 4:]
             cls_ids = np.argmax(cls_scores, axis=1)
-            confidences = np.max(cls_scores, axis=1) * pred[:, 4]
+            confidences = np.max(cls_scores, axis=1)
 
             for i in range(len(pred)):
                 if confidences[i] < self.conf_threshold:
@@ -202,14 +202,79 @@ class YOLOInferenceEngine:
                     class_name=self.CLASS_NAMES.get(int(cls_ids[i]), "unknown")
                 ))
 
-        # 多尺度YOLO输出: 3个尺度的特征图 (自定义模型格式, 已弃用)
+        # 多尺度YOLO输出: 3个尺度的特征图 (YOLOv8/v11检测头原生输出)
         elif len(outputs) == 3:
-            raise NotImplementedError(
-                "3输出多尺度YOLO格式已不再支持。"
-                "请使用YOLO11单输出格式: model.export(format='onnx', opset=12)"
-            )
+            detections = self._postprocess_dfl(outputs, orig_shape)
 
         return detections
+
+    def _postprocess_dfl(self, outputs: list,
+                         orig_shape: tuple) -> list[DetectionBox]:
+        """YOLOv8/v11 DFL后处理 (3尺度原生检测头输出)"""
+        nc = 2
+        reg_max = 4
+        no = reg_max * 4 + nc
+        strides = [8, 16, 32]
+
+        all_boxes, all_scores, all_cls = [], [], []
+
+        for i, pred in enumerate(outputs):
+            stride = strides[i]
+            _, _, h, w = pred.shape
+
+            pred = pred.reshape(1, no, -1).transpose(0, 2, 1)
+            bbox = pred[..., :reg_max * 4].reshape(1, -1, 4, reg_max)
+            cls = pred[..., reg_max * 4:]
+
+            # DFL softmax over reg_max dimension
+            bbox = np.exp(bbox - bbox.max(axis=-1, keepdims=True))
+            bbox = bbox / bbox.sum(axis=-1, keepdims=True)
+            w_dfl = np.arange(reg_max, dtype=np.float32).reshape(1, 1, 1, -1)
+            ltrb = (bbox * w_dfl).sum(axis=-1)  # (1, N, 4)
+
+            # Anchor points in feature map space (no stride multiplication yet)
+            gy, gx = np.meshgrid(np.arange(h), np.arange(w), indexing='ij')
+            anchor_x = (gx.astype(np.float32) + 0.5).reshape(1, -1, 1)
+            anchor_y = (gy.astype(np.float32) + 0.5).reshape(1, -1, 1)
+
+            left, top, right, bottom = np.split(ltrb, 4, axis=-1)
+
+            # Decode boxes in feature map space, then scale to input image space
+            boxes = np.concatenate([
+                (anchor_x - left) * stride,
+                (anchor_y - top) * stride,
+                (anchor_x + right) * stride,
+                (anchor_y + bottom) * stride,
+            ], axis=-1)
+
+            cls = 1.0 / (1.0 + np.exp(-cls))
+            all_boxes.append(boxes[0])
+            all_scores.append(cls[0].max(axis=-1))
+            all_cls.append(cls[0].argmax(axis=-1))
+
+        boxes = np.concatenate(all_boxes)
+        scores = np.concatenate(all_scores)
+        cls_ids = np.concatenate(all_cls)
+
+        mask = scores > self.conf_threshold
+        boxes, scores, cls_ids = boxes[mask], scores[mask], cls_ids[mask]
+
+        sx = orig_shape[1] / self.img_size
+        sy = orig_shape[0] / self.img_size
+
+        detections = []
+        for i in range(len(boxes)):
+            detections.append(DetectionBox(
+                x1=float(boxes[i, 0] * sx),
+                y1=float(boxes[i, 1] * sy),
+                x2=float(boxes[i, 2] * sx),
+                y2=float(boxes[i, 3] * sy),
+                confidence=float(scores[i]),
+                class_id=int(cls_ids[i]),
+                class_name=self.CLASS_NAMES.get(int(cls_ids[i]), "unknown"),
+            ))
+
+        return self._nms(detections)
 
     def _nms(self, boxes: list[DetectionBox]) -> list[DetectionBox]:
         """非极大值抑制"""
