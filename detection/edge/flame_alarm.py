@@ -381,7 +381,8 @@ class FlameAlarmDetector:
         self.frame_count += 1
         return annotated, detections, alarm
 
-    def process_video(self, video_path: str, display: bool = False) -> dict:
+    def process_video(self, video_path: str, display: bool = False,
+                      save_video: bool = False, output_dir: str = "") -> dict:
         """处理整个视频文件"""
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -399,6 +400,17 @@ class FlameAlarmDetector:
         idx = 0
         paused = False
 
+        # ★ 保存完整标注视频
+        writer = None
+        out_video_path = ""
+        if save_video:
+            out_dir = Path(output_dir) if output_dir else Path("output")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_video_path = str(out_dir / f"{name}_detected.mp4")
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            writer = cv2.VideoWriter(out_video_path, fourcc, fps_src, (w, h))
+            logger.info(f"标注视频输出: {out_video_path}")
+
         while True:
             if not paused:
                 ret, frame = cap.read()
@@ -407,6 +419,9 @@ class FlameAlarmDetector:
                 idx += 1
 
                 annotated, dets, alarm = self.process_frame(frame)
+
+                if writer:
+                    writer.write(annotated)
 
                 # 进度
                 pct = idx / total_frames * 100 if total_frames else 0
@@ -426,15 +441,19 @@ class FlameAlarmDetector:
                     paused = not paused
 
         cap.release()
+        if writer:
+            writer.release()
         if display:
             cv2.destroyAllWindows()
 
-        return {
+        result = {
             "video": video_path,
+            "output_video": out_video_path,
             "frames": idx,
             "fire_frames": self.fire_frames,
             "alarms": self.alarm_count,
         }
+        return result
 
 
 # ============================================================
@@ -556,6 +575,9 @@ def parse_args():
     p.add_argument("--conf", type=float, default=0.25, help="置信度阈值")
     p.add_argument("--img-size", type=int, default=416, help="输入尺寸")
     p.add_argument("--no-display", action="store_true", help="不显示窗口")
+    p.add_argument("--save-video", action="store_true", help="保存完整标注检测视频")
+    p.add_argument("--output-dir", type=str, default="output", help="标注视频输出目录")
+    p.add_argument("--push-video", action="store_true", help="将检测视频base64上传至服务器")
     p.add_argument("--clip-sec", type=float, default=5.0, help="报警视频片段长度(秒)")
     p.add_argument("--filter-window", type=int, default=5, help="时域滤波窗口")
     p.add_argument("--filter-votes", type=int, default=3, help="报警所需投票数")
@@ -605,6 +627,10 @@ def main():
     print(f" 时域滤波: {args.filter_votes}/{args.filter_window} 投票")
     print(f" 报警视频: {args.clip_sec}秒")
     print(f" 位置: ({args.lng}, {args.lat}) {args.location}")
+    if args.save_video:
+        print(f" 标注视频: {args.output_dir}/<name>_detected.mp4")
+    if args.push_video:
+        print(f" 视频上传: 启用 (base64 → server)")
     print()
 
     detector = FlameAlarmDetector(
@@ -628,11 +654,44 @@ def main():
         if not Path(vpath).exists():
             logger.warning(f"视频不存在: {vpath}")
             continue
-        result = detector.process_video(vpath, display=not args.no_display)
+        result = detector.process_video(vpath, display=not args.no_display,
+                                        save_video=args.save_video,
+                                        output_dir=args.output_dir)
         all_results.append(result)
         print(f"\n  {Path(vpath).name}: {result.get('frames',0)}帧, "
               f"火焰{result.get('fire_frames',0)}帧, "
               f"报警{result.get('alarms',0)}次")
+        if result.get('output_video'):
+            print(f"  标注视频: {result['output_video']}")
+
+            # ★ 推送完整标注视频到服务器
+            if args.push_video and not offline:
+                from edge.flame_alarm import encode_frame_jpeg
+                vid_path = result['output_video']
+                try:
+                    with open(vid_path, 'rb') as vf:
+                        video_b64 = base64.b64encode(vf.read()).decode('utf-8')
+                    import requests
+                    report_url = f"{args.server}/index.php/api/alarm/report"
+                    resp = requests.post(report_url, json={
+                        'device_id': args.device_id,
+                        'camera_id': 0,
+                        'area_id': args.area_id,
+                        'event_type': 'fire',
+                        'confidence': 0.9,
+                        'longitude': str(args.lng),
+                        'latitude': str(args.lat),
+                        'location': args.location,
+                        'urgency_degree': '重要',
+                        'description': f'边缘端检测视频: {Path(vpath).name}',
+                        'video_base64': video_b64,
+                    }, timeout=30)
+                    if resp.status_code == 200:
+                        logger.info(f"检测视频已上传至服务器")
+                    else:
+                        logger.warning(f"视频上传失败: {resp.status_code}")
+                except Exception as e:
+                    logger.warning(f"视频上传异常: {e}")
 
     # 汇总
     total_alarms = sum(r.get("alarms", 0) for r in all_results)
