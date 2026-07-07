@@ -1,0 +1,75 @@
+# ── Python 缓存 ──
+__pycache__/
+*.pyc
+
+# ── IDE 和编辑器 ──
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── 临时文件和日志 ──
+*.log
+logs/
+detection/output/logs/
+
+# ── 系统文件 ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Claude Code 配置 ──
+.claude/
+
+# ── 文档文件（二进制）──
+*.docx
+*.pdf
+*.doc
+
+# ── 模型权重文件（太大，不上传）──
+*.pt
+*.onnx
+*.rknn
+*.onnx.data
+
+# ── 训练输出目录 ──
+detection/output/yolo_train/
+detection/output/dfire_train/
+detection/output/checkpoints/
+detection/output/export/
+
+# ── 数据集和标注数据 ──
+detection/data/smoke_dataset/
+detection/data/manual_label/
+
+# ── 测试视频和检测结果视频 ──
+test/
+detection/test/
+detection/output/*.mp4
+detection/output/*.avi
+detection/output/alarm_clips/
+detection/output/alarm_events/
+detection/runs/
+
+# ── 静态视频文件 ──
+static/videos/
+static/uploads/
+
+# ── 数据库文件 ──
+*.db
+*.sqlite3
+
+# ── 敏感配置（边缘设备密钥）──
+edge_config.json
+detection/edge_config.json
+
+# ── 上传目录 ──
+web/uploads/
+
+# ── Python 虚拟环境 ──
+.venv/
+venv/
+
+# ── 截图和文档图片 ──
+screenshots/
+docs/

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <!-- Bootstrap 5 CSS (本地) -->
+    <link href="{{ url_for('static', filename='lib/css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Bootstrap Icons (本地) -->
+    <link href="{{ url_for('static', filename='lib/css/bootstrap-icons.css') }}" rel="stylesheet">
+    <!-- LayUI 核心样式 (本地) -->
+    <link href="{{ url_for('static', filename='lib/css/layui.css') }}" rel="stylesheet">
+    <!-- 自定义样式 -->
+    <link href="{{ url_for('static', filename='css/app.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if current_user %}
+    <!-- ========== 顶部导航栏 ========== -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top shadow-sm">
+        <div class="container-fluid">
+            <!-- Logo区域 -->
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+                <i class="bi bi-fire text-danger fs-4 me-2"></i>
+                <span class="fw-bold">{{ logo_text }}</span>
+            </a>
+
+            <!-- 移动端菜单按钮 -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav" aria-controls="navbarNav"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- 导航菜单 -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}"
+                           href="{{ url_for('main.index') }}">
+                            <i class="bi bi-map"></i> GIS数据大屏
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
+                           href="{{ url_for('main.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> 管理仪表盘
+                        </a>
+                    </li>
+                    <!-- 系统设置下拉 -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-gear"></i> 系统设置
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.system_config') }}">
+                                <i class="bi bi-sliders"></i> 系统配置</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.department') }}">
+                                <i class="bi bi-building"></i> 部门管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.user_management') }}">
+                                <i class="bi bi-people"></i> 用户管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.role_management') }}">
+                                <i class="bi bi-person-badge"></i> 角色管理</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.datadict') }}">
+                                <i class="bi bi-journal-text"></i> 数据字典</a></li>
+                        </ul>
+                    </li>
+                    <!-- 设备管理下拉 -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-cpu"></i> 设备管理
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.cloudbox') }}">
+                                <i class="bi bi-box"></i> AI智能云盒</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.camera_management') }}">
+                                <i class="bi bi-camera-video"></i> 摄像头管理</a></li>
+                        </ul>
+                    </li>
+                    <!-- 报警事件下拉 -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-bell"></i> 报警事件
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.alarm_event') }}">
+                                <i class="bi bi-exclamation-triangle"></i> 报警事件</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.alarm_review') }}">
+                                <i class="bi bi-check-circle"></i> 事件审核</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.camera_fault') }}">
+                                <i class="bi bi-camera-video-off"></i> 摄像头故障</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.cloudbox_fault') }}">
+                                <i class="bi bi-box-arrow-down"></i> AI云盒故障</a></li>
+                        </ul>
+                    </li>
+                    <!-- 日志管理下拉 -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-journal"></i> 日志管理
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.access_log') }}">
+                                <i class="bi bi-eye"></i> 访问日志</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.operation_log') }}">
+                                <i class="bi bi-pencil-square"></i> 操作日志</a></li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <!-- 右侧用户区域 -->
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <a class="nav-link dropdown-toggle text-light d-flex align-items-center"
+                           href="#" role="button" data-bs-toggle="dropdown"
+                           aria-expanded="false">
+                            <i class="bi bi-person-circle fs-5 me-1"></i>
+                            <span>{{ current_user.real_name or current_user.username }}</span>
+                            {% if current_user.user_type == 1 %}
+                            <span class="badge bg-danger ms-1">管理员</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">
+                                <i class="bi bi-person"></i> 个人资料</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                                <i class="bi bi-box-arrow-right"></i> 退出登录</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========== 主内容区域 ========== -->
+    <main class="main-content">
+        <!-- Flash消息 -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="container-fluid mt-3">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm"
+                 role="alert">
+                <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"
+                        aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    {% else %}
+    <!-- 未登录用户只显示内容 -->
+    {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <!-- ========== 页脚 ========== -->
+    <footer class="footer mt-auto py-2 bg-light border-top">
+        <div class="container-fluid text-center">
+            <small class="text-muted">
+                &copy; {{ current_year }} {{ site_name }} |
+                基于AI深度学习的火焰智能识别系统 |
+                v1.1.0
+            </small>
+        </div>
+    </footer>
+
+    <!-- jQuery (本地) -->
+    <script src="{{ url_for('static', filename='lib/js/jquery.min.js') }}"></script>
+    <!-- Bootstrap 5 JS (本地) -->
+    <script src="{{ url_for('static', filename='lib/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- LayUI JS (本地) -->
+    <script src="{{ url_for('static', filename='lib/js/layui.js') }}"></script>
+    <!-- ECharts 5 (本地) -->
+    <script src="{{ url_for('static', filename='lib/js/echarts.min.js') }}"></script>
+    <!-- 高德地图 JSAPI v2.0 Loader -->
+    <script src="https://webapi.amap.com/loader.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!-- XSS防护: HTML转义工具函数 -->
+    <script>
+    function escHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    // 安全删除确认：用data属性替代字符串拼接onclick
+    $(document).on('click', '.delete-btn', function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        if (confirm('确认删除 "' + name + '"?')) {
+            var type = $(this).data('type') || 'cam';
+            var url = type === 'cb' ? '/api/v1/cloudboxes/' + id : '/api/v1/cameras/' + id;
+            $.ajax({ url: url, method: 'DELETE',
+                success: function(r) { alert(r.msg || '已删除'); location.reload(); },
+                error: function() { alert('删除失败'); }
+            });
+        }
+    });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

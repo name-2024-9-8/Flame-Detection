@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}部门管理 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>
+    .page-container { padding: 20px; background: #f5f6fa; min-height: calc(100vh - 100px); }
+    .card-custom { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+    .table th { background: #f8f9fa; font-size: 13px; font-weight: 700; color: #1a1a2e; border-bottom: 2px solid #e74c3c; }
+    .btn-action { padding: 4px 12px; font-size: 12px; border-radius: 6px; margin: 0 2px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-container">
+    <div class="container-fluid">
+        <div class="card-custom">
+            <div class="toolbar">
+                <h4 class="fw-bold m-0"><i class="bi bi-building me-2"></i>部门管理</h4>
+                <button class="btn btn-danger btn-sm" onclick="showModal('add')">
+                    <i class="bi bi-plus-lg me-1"></i>新建部门
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead><tr><th>ID</th><th>部门名称</th><th>部门编码</th><th>上级部门</th><th>排序</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+                    <tbody>
+                        {% for d in departments %}
+                        <tr>
+                            <td>{{ d.id }}</td><td>{{ d.name }}</td><td>{{ d.code or '-' }}</td>
+                            <td>{{ d.parent_name or '-' }}</td><td>{{ d.sort_order }}</td>
+                            <td><span class="badge bg-{{ 'success' if d.status==1 else 'secondary' }}">{{ '启用' if d.status==1 else '禁用' }}</span></td>
+                            <td>{{ d.created_at|datetime_format }}</td>
+                            <td>
+                                <button class="btn btn-info btn-action text-white" onclick="editDept({{ d|tojson }})"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-danger btn-action" onclick="deleteDept({{ d.id }},'{{ d.name }}')"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="text-center text-muted py-4">暂无部门数据</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增/编辑弹窗 -->
+<div class="modal fade" id="deptModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-danger text-white">
+        <h6 class="modal-title"><i class="bi bi-building me-1"></i><span id="modalTitle">新建部门</span></h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" id="deptId">
+        <div class="mb-3"><label class="form-label">部门名称 <span class="text-danger">*</span></label><input class="form-control" id="deptName"></div>
+        <div class="mb-3"><label class="form-label">部门编码</label><input class="form-control" id="deptCode"></div>
+        <div class="mb-3"><label class="form-label">上级部门</label><select class="form-select" id="deptParent"><option value="">无（顶级部门）</option>{% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}</select></div>
+        <div class="mb-3"><label class="form-label">排序号</label><input type="number" class="form-control" id="deptSort" value="0"></div>
+        <div class="mb-3"><label class="form-label">状态</label><select class="form-select" id="deptStatus"><option value="1">启用</option><option value="0">禁用</option></select></div>
+        <div class="mb-3"><label class="form-label">备注</label><textarea class="form-control" id="deptRemark" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button class="btn btn-danger" onclick="saveDept()">保存</button>
+    </div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let editMode = 'add';
+function showModal(mode) { editMode = mode; $('#modalTitle').text(mode==='add'?'新建部门':'修改部门'); $('#deptId').val(''); $('#deptName').val(''); $('#deptCode').val(''); $('#deptParent').val(''); $('#deptSort').val(0); $('#deptStatus').val(1); $('#deptRemark').val(''); $('#deptModal').modal('show'); }
+function editDept(d) { editMode = 'edit'; $('#modalTitle').text('修改部门'); $('#deptId').val(d.id); $('#deptName').val(d.name); $('#deptCode').val(d.code||''); $('#deptParent').val(d.parent_id||''); $('#deptSort').val(d.sort_order||0); $('#deptStatus').val(d.status); $('#deptRemark').val(d.remark||''); $('#deptModal').modal('show'); }
+function saveDept() {
+    const data = { name: $('#deptName').val(), code: $('#deptCode').val(), parent_id: $('#deptParent').val()||null, sort_order: parseInt($('#deptSort').val())||0, status: parseInt($('#deptStatus').val()), remark: $('#deptRemark').val() };
+    if (!data.name) return alert('请输入部门名称');
+    const url = editMode==='add' ? '/api/v1/departments' : '/api/v1/departments/'+$('#deptId').val();
+    const method = editMode==='add' ? 'POST' : 'PUT';
+    $.ajax({ url, method, contentType:'application/json', data: JSON.stringify(data), success(r){ alert(r.msg); location.reload(); }, error(xhr){ alert(xhr.responseJSON?.msg||'操作失败'); } });
+}
+function deleteDept(id, name) {
+    if (!confirm('确定要删除部门「'+name+'」吗？')) return;
+    $.ajax({ url: '/api/v1/departments/'+id, method: 'DELETE', success(r){ alert(r.msg); location.reload(); }, error(xhr){ alert(xhr.responseJSON?.msg||'删除失败'); } });
+}
+</script>
+{% endblock %}

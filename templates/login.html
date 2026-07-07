@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 视频AI智能识别及预警管理信息系统</title>
+    <!-- Bootstrap 5 (本地) -->
+    <link href="{{ url_for('static', filename='lib/css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Bootstrap Icons (本地) -->
+    <link href="{{ url_for('static', filename='lib/css/bootstrap-icons.css') }}" rel="stylesheet">
+    <style>
+        :root {
+            --fire-primary: #e74c3c;
+            --fire-dark: #1a1a2e;
+            --fire-darker: #16213e;
+            --fire-accent: #e94560;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--fire-darker) 0%, var(--fire-dark) 50%, #0f3460 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+
+        /* 粒子背景 */
+        .particles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(231,76,60,0.6) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: floatUp linear infinite;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% {
+                transform: translateY(-10vh) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* 火焰动画logo */
+        .fire-logo-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+        }
+
+        .fire-logo {
+            font-size: 80px;
+            color: #e74c3c;
+            text-align: center;
+            animation: flicker 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(231,76,60,0.5));
+        }
+
+        @keyframes flicker {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            15% { transform: scale(1.05); opacity: 0.9; }
+            30% { transform: scale(0.95); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.85; }
+            70% { transform: scale(0.98); opacity: 1; }
+            85% { transform: scale(1.03); opacity: 0.9; }
+        }
+
+        /* 登录卡片 */
+        .login-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 440px;
+            padding: 0 20px;
+        }
+
+        .login-card {
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px 35px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .login-card .system-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .login-card .system-subtitle {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .input-group-custom {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-group-custom .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 18px;
+            z-index: 2;
+            transition: color 0.3s;
+        }
+
+        .input-group-custom input {
+            width: 100%;
+            padding: 14px 16px 14px 50px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: #fafafa;
+            color: #333;
+        }
+
+        .input-group-custom input:focus {
+            outline: none;
+            border-color: var(--fire-primary);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(231,76,60,0.1);
+        }
+
+        .input-group-custom input:focus + .input-icon,
+        .input-group-custom input:focus ~ .input-icon {
+            color: var(--fire-primary);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 2px;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:hover {
+            background: linear-gradient(135deg, #e94560, #e74c3c);
+            box-shadow: 0 8px 25px rgba(231,76,60,0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        /* 角色选择区域 */
+        .role-hint {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .role-hint .role-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #fff;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0.7;
+        }
+
+        .role-hint .role-badge:hover,
+        .role-hint .role-badge.active {
+            opacity: 1;
+            box-shadow: 0 4px 12px rgba(231,76,60,0.3);
+        }
+
+        .role-hint .role-badge.normal {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .role-hint .role-badge.normal:hover,
+        .role-hint .role-badge.normal.active {
+            box-shadow: 0 4px 12px rgba(52,152,219,0.3);
+        }
+
+        /* 错误提示 */
+        .alert {
+            border-radius: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景 -->
+    <div class="particles" id="particles"></div>
+
+    <!-- 登录卡片 -->
+    <div class="login-wrapper">
+        <div class="login-card">
+            <!-- 火焰Logo -->
+            <div class="fire-logo-container">
+                <div class="fire-logo">🔥</div>
+            </div>
+
+            <div class="system-title">视频AI智能识别及预警管理系统</div>
+            <div class="system-subtitle">基于深度学习的火焰智能检测平台</div>
+
+            <!-- 角色快捷选择 -->
+            <div class="role-hint">
+                <span class="role-badge active" data-username="admin" data-password="123456"
+                      onclick="fillRole(this, 'admin', '123456')">
+                    <i class="bi bi-shield-check"></i> 管理员
+                </span>
+                <span class="role-badge normal" data-username="chuli001" data-password="123456"
+                      onclick="fillRole(this, 'chuli001', '123456')">
+                    <i class="bi bi-person-check"></i> 处理员
+                </span>
+                <span class="role-badge normal" data-username="zhangsan" data-password="123456"
+                      onclick="fillRole(this, 'zhangsan', '123456')">
+                    <i class="bi bi-person"></i> 安保员
+                </span>
+            </div>
+
+            <!-- Flash消息 -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- 登录表单 -->
+            <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
+                <div class="input-group-custom">
+                    <i class="bi bi-person input-icon"></i>
+                    <input type="text" name="username" id="username"
+                           placeholder="请输入用户名" required autocomplete="off"
+                           value="admin">
+                </div>
+
+                <div class="input-group-custom">
+                    <i class="bi bi-lock input-icon"></i>
+                    <input type="password" name="password" id="password"
+                           placeholder="请输入密码" required
+                           value="123456">
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="remember" id="remember">
+                    <label class="form-check-label text-muted" for="remember" style="font-size:14px;">
+                        记住登录状态（24小时）
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-login">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>登 录 系 统
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <i class="bi bi-shield-lock"></i>
+                安全连接 · JWT鉴权 · 数据加密传输<br>
+                &copy; 2026 AI火焰识别预警平台
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 生成粒子背景
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const count = 30;
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 6 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size * 3 + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = (Math.random() * 8 + 8) + 's';
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // 角色快捷填充
+        function fillRole(el, username, password) {
+            document.querySelectorAll('.role-badge').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            document.getElementById('username').focus();
+        });
+    </script>
+</body>
+</html>

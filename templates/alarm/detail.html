@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+{% block title %}报警事件详情 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>
+    :root {
+        --danger: #e74c3c;
+        --danger-dark: #c0392b;
+        --info: #3498db;
+        --warning: #f39c12;
+        --success: #27ae60;
+    }
+
+    .detail-container {
+        padding: 20px 24px;
+        background: #f0f2f5;
+        min-height: calc(100vh - 56px);
+    }
+
+    .detail-header {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: #fff;
+        padding: 18px 24px;
+        border-radius: 14px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        box-shadow: 0 4px 20px rgba(231,76,60,0.3);
+    }
+    .detail-header h4 { margin: 0; font-weight: 700; }
+    .detail-header .badge-status {
+        font-size: 14px;
+        padding: 6px 16px;
+        border-radius: 20px;
+    }
+    .detail-header .event-code {
+        font-size: 13px;
+        opacity: 0.85;
+        font-family: 'Courier New', monospace;
+    }
+
+    /* 信息卡片 */
+    .info-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        border-left: 4px solid var(--danger);
+    }
+    .info-card.camera-card { border-left-color: var(--info); }
+    .info-card.video-card { border-left-color: var(--success); }
+    .info-card.timeline-card { border-left-color: var(--warning); }
+    .info-card.history-card { border-left-color: #9b59b6; }
+
+    .info-card .card-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .info-card .card-title i { font-size: 20px; }
+
+    /* 属性行 */
+    .prop-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px dashed #eee;
+        font-size: 13px;
+    }
+    .prop-row:last-child { border-bottom: none; }
+    .prop-label { color: #888; flex-shrink: 0; margin-right: 16px; }
+    .prop-value { color: #333; font-weight: 500; text-align: right; word-break: break-all; }
+
+    /* 置信度进度条 */
+    .confidence-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #eee;
+        margin-top: 6px;
+        overflow: hidden;
+    }
+    .confidence-fill {
+        height: 100%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #f39c12, #e74c3c);
+    }
+
+    /* 视频容器 */
+    .video-container {
+        border-radius: 10px;
+        overflow: hidden;
+        background: #000;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    .video-container video {
+        width: 100%;
+        display: block;
+        max-height: 400px;
+    }
+    .video-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 240px;
+        color: #aaa;
+        font-size: 14px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 2px dashed #ddd;
+    }
+
+    /* 处理流程时间线 */
+    .timeline-steps {
+        display: flex;
+        align-items: flex-start;
+        padding: 8px 0;
+    }
+    .tl-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+    .tl-node {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        position: relative;
+        z-index: 2;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    .tl-node.done { background: var(--success); color: #fff; }
+    .tl-node.active { background: var(--danger); color: #fff; animation: pulse-dot 1.5s ease-in-out infinite; }
+    .tl-node.pending { background: #bdc3c7; color: #fff; }
+    .tl-connector {
+        height: 3px;
+        background: #e0e0e0;
+        flex: 1;
+        align-self: center;
+        margin-bottom: 24px;
+    }
+    .tl-connector.done { background: var(--success); }
+    .tl-label { font-size: 12px; color: #555; margin-top: 6px; font-weight: 600; }
+    .tl-time { font-size: 11px; color: #999; }
+    @keyframes pulse-dot {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(231,76,60,0.4); }
+        50% { box-shadow: 0 0 0 10px rgba(231,76,60,0); }
+    }
+
+    /* 历史表格 */
+    .history-table { width: 100%; font-size: 12px; }
+    .history-table th {
+        background: #f8f9fa; color: #555; padding: 8px 10px;
+        font-weight: 600; border-bottom: 2px solid #ddd; text-align: left;
+    }
+    .history-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; }
+    .type-fire { color: #e74c3c; font-weight: 700; }
+    .type-smoke { color: #f39c12; font-weight: 700; }
+
+    /* 返回按钮 */
+    .btn-back-detail {
+        padding: 8px 20px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.3);
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    .btn-back-detail:hover { background: rgba(255,255,255,0.3); color: #fff; }
+
+    @media (max-width: 768px) {
+        .detail-container { padding: 10px; }
+        .detail-header { padding: 12px 16px; }
+        .tl-label { font-size: 10px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="container-fluid" style="max-width:1200px;">
+
+        <!-- ===== 页头 ===== -->
+        <div class="detail-header">
+            <div>
+                <h4>
+                    {% if alarm.event_type == 1 %}🔥 火焰报警事件详情
+                    {% elif alarm.event_type == 2 %}💨 烟雾报警事件详情
+                    {% else %}⚠️ 设备异常事件详情{% endif %}
+                </h4>
+                <div class="event-code mt-1">{{ alarm.event_code }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                {% if alarm.process_status == 1 %}
+                <span class="badge-status bg-danger">待处理</span>
+                {% elif alarm.process_status == 2 %}
+                <span class="badge-status bg-warning text-dark">处理中</span>
+                {% elif alarm.process_status == 3 %}
+                <span class="badge-status bg-success">已处理</span>
+                {% elif alarm.process_status == 4 %}
+                <span class="badge-status bg-secondary">已驳回</span>
+                {% else %}
+                <span class="badge-status bg-info">已关闭</span>
+                {% endif %}
+                <a href="/" class="btn-back-detail"><i class="bi bi-arrow-left me-1"></i>返回</a>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <!-- ===== 左列：属性面板 ===== -->
+            <div class="col-lg-7">
+
+                <!-- 摄像头属性 -->
+                <div class="info-card camera-card">
+                    <div class="card-title"><i class="bi bi-camera-video" style="color:var(--info)"></i>摄像头属性</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            {% if camera %}
+                            <div class="prop-row"><span class="prop-label">设备名称</span><span class="prop-value">{{ camera.device_name or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">设备编码</span><span class="prop-value">{{ camera.device_code or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">设备型号</span><span class="prop-value">{{ camera.device_model or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">摄像头类型</span><span class="prop-value">{{ camera.camera_type or '固定摄像头' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">RTSP地址</span><span class="prop-value" style="font-size:11px;">{{ camera.rtsp_url or '-' }}</span></div>
+                            {% else %}
+                            <div class="prop-row"><span class="prop-label">关联摄像头</span><span class="prop-value">{{ alarm.camera_name or '-' }}</span></div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="prop-row"><span class="prop-label">安装位置</span><span class="prop-value">{{ camera.location or alarm.location_description or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">发生位置·经度</span><span class="prop-value">{{ alarm.longitude }}</span></div>
+                            <div class="prop-row"><span class="prop-label">发生位置·纬度</span><span class="prop-value">{{ alarm.latitude }}</span></div>
+                            <div class="prop-row"><span class="prop-label">监测物质</span><span class="prop-value">{{ camera.monitor_substance or '火焰/烟雾' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">关联AI云盒</span><span class="prop-value">{{ alarm.cloud_box_name or camera.cloud_box_name or '-' }}</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 烟源属性 -->
+                <div class="info-card">
+                    <div class="card-title"><i class="bi bi-fire" style="color:var(--danger)"></i>烟源属性</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="prop-row"><span class="prop-label">事件类型</span><span class="prop-value" style="color:var(--danger);font-weight:700;">{{ alarm.event_type_name or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">报警级别</span><span class="prop-value">
+                                <span class="badge {% if alarm.alarm_level == 1 %}bg-danger{% elif alarm.alarm_level == 2 %}bg-warning text-dark{% else %}bg-info{% endif %}">{{ alarm.alarm_level_name or '-' }}</span>
+                            </span></div>
+                            <div class="prop-row"><span class="prop-label">AI识别置信度</span><span class="prop-value">{{ '%.1f%%' | format(alarm.detection_confidence * 100) if alarm.detection_confidence else '-' }}</span></div>
+                            {% if alarm.detection_confidence %}
+                            <div class="confidence-bar mt-1 mb-2">
+                                <div class="confidence-fill" style="width:{{ (alarm.detection_confidence * 100) | int }}%"></div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="prop-row"><span class="prop-label">检测时间</span><span class="prop-value">{{ alarm.detected_at or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">发生火焰的位置</span><span class="prop-value">{{ alarm.location_description or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">火焰坐标(经纬度)</span><span class="prop-value">{{ '%.6f' | format(alarm.longitude|float) }}, {{ '%.6f' | format(alarm.latitude|float) }}</span></div>
+                            <div class="prop-row"><span class="prop-label">事件描述</span><span class="prop-value">{{ alarm.description or '边缘AI设备自动检测报警' }}</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 取证图片 -->
+                <div class="info-card" style="border-left-color:var(--danger);">
+                    <div class="card-title"><i class="bi bi-image" style="color:var(--danger)"></i>火焰检测图片</div>
+                    {% if alarm.image_url %}
+                    <div style="border-radius:10px;overflow:hidden;background:#000;box-shadow:0 2px 12px rgba(0,0,0,0.15);">
+                        <img src="{{ alarm.image_url }}" alt="火焰检测截图" style="width:100%;display:block;max-height:450px;object-fit:contain;">
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="bi bi-info-circle me-1"></i>
+                        图片由AI模型在检测到火情时自动抓拍，红框标记为火焰/烟雾位置
+                    </small>
+                    {% else %}
+                    <div class="video-placeholder">
+                        <i class="bi bi-image me-2"></i>暂无检测图片
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- 取证视频 -->
+                <div class="info-card video-card">
+                    <div class="card-title"><i class="bi bi-play-circle" style="color:var(--success)"></i>取证视频</div>
+                    {% if alarm.video_url %}
+                    <div class="video-container">
+                        <video controls preload="metadata">
+                            <source src="{{ alarm.video_url }}" type="video/mp4">
+                            您的浏览器不支持HTML5视频播放
+                        </video>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="bi bi-info-circle me-1"></i>
+                        视频由边缘AI设备（RK3399 Pro D / Orange Pi 5 NPU）在检测到火情时自动抓拍录制
+                    </small>
+                    {% else %}
+                    <div class="video-placeholder">
+                        <i class="bi bi-camera-video-off me-2"></i>暂无取证视频
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- ===== 右列：流程 + 历史 ===== -->
+            <div class="col-lg-5">
+
+                <!-- 处理流程时间线 -->
+                <div class="info-card timeline-card">
+                    <div class="card-title"><i class="bi bi-clock-history" style="color:var(--warning)"></i>处理流程</div>
+
+                    {% set ps = alarm.process_status or 1 %}
+                    <div class="timeline-steps">
+                        <div class="tl-step">
+                            <div class="tl-node {{ 'done' if ps >= 1 else 'pending' }}">1</div>
+                            <div class="tl-label">报警触发</div>
+                            <div class="tl-time">{{ alarm.detected_at or '-' }}</div>
+                        </div>
+                        <div class="tl-connector {{ 'done' if ps >= 2 else '' }}"></div>
+                        <div class="tl-step">
+                            <div class="tl-node {{ 'active' if ps == 2 else ('done' if ps > 2 else 'pending') }}">2</div>
+                            <div class="tl-label">处理中</div>
+                            <div class="tl-time">{{ alarm.handled_at or '-' }}</div>
+                        </div>
+                        <div class="tl-connector {{ 'done' if ps >= 3 else '' }}"></div>
+                        <div class="tl-step">
+                            <div class="tl-node {{ 'done' if ps >= 3 else 'pending' }}">3</div>
+                            <div class="tl-label">已处理</div>
+                            <div class="tl-time">{{ alarm.audit_time or alarm.handled_at or '-' }}</div>
+                        </div>
+                    </div>
+
+                    {% if alarm.handler_remark %}
+                    <div class="mt-3 p-3 rounded" style="background:#fef9e7;border-left:3px solid var(--warning);">
+                        <strong style="color:var(--warning);">📝 处理备注：</strong>
+                        <span class="text-muted ms-1">{{ alarm.handler_remark }}</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <div class="prop-row"><span class="prop-label">处理人</span><span class="prop-value">{{ alarm.handler_name or '系统自动' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">审核人</span><span class="prop-value">{{ alarm.audit_name or '-' }}</span></div>
+                            <div class="prop-row"><span class="prop-label">审核时间</span><span class="prop-value">{{ alarm.audit_time or '-' }}</span></div>
+                        </small>
+                    </div>
+                </div>
+
+                <!-- 历史报警记录 -->
+                <div class="info-card history-card">
+                    <div class="card-title"><i class="bi bi-list-ul" style="color:#9b59b6"></i>该摄像头历史报警记录</div>
+                    {% if history %}
+                    <div class="table-responsive">
+                        <table class="history-table">
+                            <thead><tr><th>时间</th><th>类型</th><th>置信度</th><th>状态</th></tr></thead>
+                            <tbody>
+                            {% for h in history %}
+                            <tr>
+                                <td>{{ h.detected_at[:16] if h.detected_at else '-' }}</td>
+                                <td class="{{ 'type-fire' if h.event_type == 1 else 'type-smoke' }}">{{ h.event_type_name }}</td>
+                                <td>{{ '%.0f%%' | format(h.detection_confidence * 100) if h.detection_confidence else '-' }}</td>
+                                <td>{{ h.process_status_name }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">暂无历史报警记录</div>
+                    {% endif %}
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="d-grid gap-2">
+                    <a href="/alarm/event" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-list-ul me-1"></i>返回事件列表
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

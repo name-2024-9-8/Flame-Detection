@@ -1,0 +1,86 @@
+{
+    "device": {
+        "device_id": 1,
+        "mac": "AA:BB:CC:DD:EE:FF",
+        "name": "OrangePi5-Flame-01",
+        "area_id": 1,
+        "longitude": 116.397428,
+        "latitude": 39.909230,
+        "location": "北京市东城区"
+    },
+
+    "server": {
+        "url": "http://192.168.1.100:8083",
+        "api_key": "",
+        "heartbeat_interval_s": 30,
+        "upload_timeout_s": 30
+    },
+
+    "model": {
+        "path": "output/export/smoke_detector_fp16.rknn",
+        "conf_threshold": 0.25,
+        "iou_threshold": 0.5,
+        "img_size": 416
+    },
+
+    "video": {
+        "target_fps": 15,
+        "clip_pre_frames": 30,
+        "clip_post_frames": 45,
+        "clip_dir": "output/clips",
+        "save_annotated": true,
+        "show_preview": false
+    },
+
+    "preprocessing": {
+        "enable_dehaze": true,
+        "enable_clahe": true
+    },
+
+    "temporal_filter": {
+        "window_size": 5,
+        "vote_threshold": 3,
+        "cooldown_frames": 30
+    },
+
+    "performance": {
+        "latency_target_ms": 2000
+    },
+
+    "cameras": [
+        {
+            "camera_id": 1,
+            "name": "监控点A-工业园区",
+            "rtsp_url": "rtsp://admin:admin@192.168.1.64:554/Streaming/Channels/101",
+            "ip": "192.168.1.64",
+            "port": 554,
+            "username": "admin",
+            "password": "admin",
+            "width": 1920,
+            "height": 1080,
+            "fps": 25,
+            "longitude": 116.394000,
+            "latitude": 39.905300,
+            "area_id": 1,
+            "device_id": 1,
+            "calib_file": "data/camera_calib/camera_001_calib.json"
+        },
+        {
+            "camera_id": 2,
+            "name": "监控点B-居民区",
+            "rtsp_url": "",
+            "ip": "192.168.1.65",
+            "port": 554,
+            "username": "admin",
+            "password": "admin",
+            "width": 1920,
+            "height": 1080,
+            "fps": 25,
+            "longitude": 116.401000,
+            "latitude": 39.905300,
+            "area_id": 2,
+            "device_id": 1,
+            "calib_file": "data/camera_calib/camera_002_calib.json"
+        }
+    ]
+}

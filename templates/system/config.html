@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}系统配置 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>
+    .page-container { padding: 20px; background: #f5f6fa; min-height: calc(100vh - 100px); }
+    .card-custom { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .config-section { margin-bottom: 28px; }
+    .config-section h6 { font-size: 15px; font-weight: 700; color: #1a1a2e; padding-bottom: 10px; border-bottom: 2px solid #e74c3c; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .form-label-custom { font-weight: 600; font-size: 13px; color: #555; margin-bottom: 4px; }
+    .form-text-custom { font-size: 11px; color: #999; margin-top: 2px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-container">
+    <div class="container-fluid">
+        <h4 class="mb-3 fw-bold"><i class="bi bi-sliders me-2"></i>系统配置</h4>
+        <div class="card-custom">
+            <form id="configForm">
+                <!-- 基础设置 -->
+                <div class="config-section">
+                    <h6><i class="bi bi-gear"></i> 基础设置</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label-custom">站点名称</label>
+                            <input class="form-control" name="site_name" value="{{ configs|selectattr('config_key','equalto','site_name')|map(attribute='config_value')|first or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">Logo文字</label>
+                            <input class="form-control" name="logo_text" value="{{ configs|selectattr('config_key','equalto','logo_text')|map(attribute='config_value')|first or 'AI火焰识别预警' }}">
+                        </div>
+                    </div>
+                </div>
+                <!-- 检测参数 -->
+                <div class="config-section">
+                    <h6><i class="bi bi-fire"></i> 火焰检测参数</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label-custom">火焰检测置信度阈值</label>
+                            <input type="number" step="0.01" min="0" max="1" class="form-control" name="fire_threshold" value="{{ configs|selectattr('config_key','equalto','fire_threshold')|map(attribute='config_value')|first or '0.85' }}">
+                            <div class="form-text-custom">范围: 0~1，推荐值 0.85</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-custom">烟雾检测置信度阈值</label>
+                            <input type="number" step="0.01" min="0" max="1" class="form-control" name="smoke_threshold" value="{{ configs|selectattr('config_key','equalto','smoke_threshold')|map(attribute='config_value')|first or '0.80' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-custom">报警取证视频时长（秒）</label>
+                            <input type="number" class="form-control" name="video_duration" value="{{ configs|selectattr('config_key','equalto','video_duration')|map(attribute='config_value')|first or '5' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">取证图片宽度（像素）</label>
+                            <input type="number" class="form-control" name="image_width" value="{{ configs|selectattr('config_key','equalto','image_width')|map(attribute='config_value')|first or '1920' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">取证图片高度（像素）</label>
+                            <input type="number" class="form-control" name="image_height" value="{{ configs|selectattr('config_key','equalto','image_height')|map(attribute='config_value')|first or '1080' }}">
+                        </div>
+                    </div>
+                </div>
+                <!-- 网络与心跳 -->
+                <div class="config-section">
+                    <h6><i class="bi bi-wifi"></i> 网络与心跳</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label-custom">心跳时间（秒）</label>
+                            <input type="number" class="form-control" name="heartbeat_interval" value="{{ configs|selectattr('config_key','equalto','heartbeat_interval')|map(attribute='config_value')|first or '30' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-custom">网络异常阈值（秒）</label>
+                            <input type="number" class="form-control" name="network_abnormal_threshold" value="{{ configs|selectattr('config_key','equalto','network_abnormal_threshold')|map(attribute='config_value')|first or '60' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-custom">最大并发摄像头数量</label>
+                            <input type="number" class="form-control" name="max_concurrent_cameras" value="{{ configs|selectattr('config_key','equalto','max_concurrent_cameras')|map(attribute='config_value')|first or '30' }}">
+                        </div>
+                    </div>
+                </div>
+                <!-- 高德地图配置 -->
+                <div class="config-section">
+                    <h6><i class="bi bi-map"></i> 高德地图配置</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label-custom">高德地图Web端Key</label>
+                            <input class="form-control" name="amap_key" placeholder="从高德开放平台获取" value="{{ configs|selectattr('config_key','equalto','amap_key')|map(attribute='config_value')|first or '' }}">
+                            <div class="form-text-custom">申请地址：https://console.amap.com/</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">高德地图安全密钥</label>
+                            <input class="form-control" name="amap_security_code" placeholder="与Key配套的安全密钥" value="{{ configs|selectattr('config_key','equalto','amap_security_code')|map(attribute='config_value')|first or '' }}">
+                            <div class="form-text-custom">JSAPI v2.0 强制要求，需与Key配对使用</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 数据保留 -->
+                <div class="config-section">
+                    <h6><i class="bi bi-database"></i> 数据保留策略</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label-custom">报警数据保留天数</label>
+                            <input type="number" class="form-control" name="alarm_retention_days" value="{{ configs|selectattr('config_key','equalto','alarm_retention_days')|map(attribute='config_value')|first or '90' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">日志数据保留天数</label>
+                            <input type="number" class="form-control" name="log_retention_days" value="{{ configs|selectattr('config_key','equalto','log_retention_days')|map(attribute='config_value')|first or '180' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-check-lg me-1"></i>保存配置
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+$('#configForm').on('submit', function(e) {
+    e.preventDefault();
+    const data = {};
+    $(this).serializeArray().forEach(item => { data[item.name] = item.value; });
+    $.ajax({
+        url: '/api/v1/system-configs',
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(res) {
+            alert(res.msg || '保存成功');
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('保存失败: ' + (xhr.responseJSON?.msg || '未知错误'));
+        }
+    });
+});
+</script>
+{% endblock %}

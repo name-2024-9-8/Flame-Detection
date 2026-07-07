@@ -1,0 +1,410 @@
+/*
+=============================================================================
+视频AI智能识别及预警管理信息系统 - 火焰识别
+全局自定义样式
+作者：段林川（前端开发与质量保障工程师）
+创建时间：2026-06-11
+功能描述：系统全局样式，包括主题色、导航栏、卡片、表格、按钮等
+          组件的美化，响应式布局适配，浏览器兼容性处理
+=============================================================================
+*/
+
+/* ===== CSS变量（主题色） ===== */
+:root {
+    --primary: #e74c3c;
+    --primary-dark: #c0392b;
+    --primary-light: #fadbd8;
+    --dark: #1a1a2e;
+    --dark-secondary: #16213e;
+    --accent: #3498db;
+    --accent-green: #2ecc71;
+    --accent-yellow: #f39c12;
+    --text-primary: #1a1a2e;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --bg-light: #f5f6fa;
+    --border-color: #e8e8e8;
+    --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --transition: all 0.3s ease;
+}
+
+/* ===== 全局基础 ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 14px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'Segoe UI',
+                 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    background: var(--bg-light);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== 导航栏 ===== */
+.navbar {
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.25);
+    z-index: 1040;
+}
+
+.navbar-dark {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.navbar-brand {
+    font-size: 18px;
+    letter-spacing: 1px;
+}
+
+.navbar .nav-link {
+    font-size: 13.5px;
+    padding: 8px 12px !important;
+    border-radius: 8px;
+    transition: var(--transition);
+    margin: 0 1px;
+}
+
+.navbar .nav-link:hover {
+    background: rgba(231, 76, 60, 0.15);
+    color: #fff !important;
+}
+
+.navbar .nav-link.active {
+    background: rgba(231, 76, 60, 0.25);
+    color: #fff !important;
+    font-weight: 600;
+}
+
+.dropdown-menu {
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    padding: 8px 0;
+    margin-top: 8px;
+}
+
+.dropdown-item {
+    font-size: 13.5px;
+    padding: 8px 18px;
+    transition: var(--transition);
+}
+
+.dropdown-item:hover {
+    background: rgba(231, 76, 60, 0.06);
+    color: var(--primary);
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+    margin-right: 4px;
+}
+
+/* ===== 主内容区域 ===== */
+.main-content {
+    margin-top: 56px;
+    min-height: calc(100vh - 90px);
+}
+
+/* ===== 页脚 ===== */
+.footer {
+    font-size: 12px;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+/* ===== 页面容器通用 ===== */
+.page-container {
+    padding: 20px;
+    background: var(--bg-light);
+    min-height: calc(100vh - 100px);
+}
+
+.card-custom {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.card-custom:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* ===== 表格样式 ===== */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background: #f8f9fa;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary);
+    white-space: nowrap;
+    padding: 12px 14px;
+}
+
+.table td {
+    font-size: 13px;
+    padding: 10px 14px;
+    vertical-align: middle;
+    color: var(--text-secondary);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(231, 76, 60, 0.03);
+}
+
+.table-responsive {
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+}
+
+/* ===== 徽章优化 ===== */
+.badge {
+    font-weight: 500;
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.badge-danger,
+.bg-danger {
+    background-color: var(--primary) !important;
+}
+
+/* ===== 按钮优化 ===== */
+.btn {
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-sm {
+    font-size: 12px;
+    padding: 4px 12px;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border: none;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #e94560, #e74c3c);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+/* ===== 表单控件优化 ===== */
+.form-control,
+.form-select {
+    font-size: 13.5px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 8px 14px;
+    transition: var(--transition);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+/* ===== 模态框优化 ===== */
+.modal-content {
+    border-radius: var(--radius);
+    border: none;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 14px 20px;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* ===== Alert消息优化 ===== */
+.alert {
+    border-radius: 10px;
+    font-size: 13.5px;
+    border: none;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.alert-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+/* ===== 分页按钮 ===== */
+.btn-group .btn {
+    font-size: 12px;
+    min-width: 36px;
+}
+
+/* ===== 统计卡片（通用） ===== */
+.stat-mini {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    transition: var(--transition);
+}
+
+.stat-mini:hover {
+    background: #eef0f2;
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-mini .num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.stat-mini .lbl {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ===== 搜索筛选区域 ===== */
+.filter-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-row select,
+.filter-row input {
+    width: auto;
+    min-width: 120px;
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* ===== 加载动画 ===== */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e0e0e0;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===== 响应式设计 ===== */
+@media (max-width: 1200px) {
+    .table { font-size: 12px; }
+    .table th, .table td { padding: 8px 10px; }
+}
+
+@media (max-width: 992px) {
+    .page-container { padding: 14px; }
+    .card-custom { padding: 16px; }
+    .filter-row { flex-direction: column; align-items: stretch; }
+    .filter-row select,
+    .filter-row input { width: 100%; min-width: auto; }
+}
+
+@media (max-width: 768px) {
+    html { font-size: 13px; }
+    .navbar-brand { font-size: 15px; }
+    .main-content { margin-top: 50px; }
+    .page-container { padding: 10px; }
+    .card-custom { padding: 14px; border-radius: 10px; }
+    .table { font-size: 11px; }
+    .table th, .table td { padding: 6px 8px; }
+    .btn { font-size: 12px; padding: 5px 10px; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .modal-dialog { margin: 10px; }
+}
+
+@media (max-width: 576px) {
+    .table-responsive { font-size: 11px; }
+    .stat-mini .num { font-size: 22px; }
+    h4 { font-size: 16px; }
+}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}数据字典 - {{ site_name }}{% endblock %}
+{% block extra_css %}
+<style>.page-container{padding:20px;background:#f5f6fa;min-height:calc(100vh - 100px)}.card-custom{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}.table th{background:#f8f9fa;font-size:13px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #e74c3c}</style>{% endblock %}
+{% block content %}
+<div class="page-container"><div class="container-fluid"><div class="card-custom">
+<div class="toolbar"><h4 class="fw-bold m-0"><i class="bi bi-journal-text me-2"></i>数据字典</h4><button class="btn btn-danger btn-sm" onclick="showModal('add')"><i class="bi bi-plus-lg me-1"></i>新建字典项</button></div>
+<div class="filter-row mb-3"><select class="form-select form-select-sm" id="fDictType" onchange="filterByType()" style="width:200px"><option value="">全部类型</option>{% for t in dict_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select></div>
+<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>ID</th><th>字典类型</th><th>标签</th><th>值</th><th>排序</th><th>状态</th><th>操作</th></tr></thead>
+<tbody>{% for d in dicts %}<tr class="dict-row" data-type="{{ d.dict_type }}"><td>{{ d.id }}</td><td><span class="badge bg-info">{{ d.dict_type }}</span></td><td>{{ d.dict_label }}</td><td>{{ d.dict_value }}</td><td>{{ d.sort_order }}</td><td><span class="badge bg-{{ 'success' if d.status==1 else 'secondary' }}">{{ '启用' if d.status==1 else '禁用' }}</span></td><td><button class="btn btn-info btn-sm text-white me-1" onclick="editDict({{ d|tojson }})"><i class="bi bi-pencil"></i></button><button class="btn btn-danger btn-sm" onclick="deleteDict({{ d.id }})"><i class="bi bi-trash"></i></button></td></tr>{% endfor %}</tbody></table></div></div></div></div>
+<div class="modal fade" id="dictModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-danger text-white"><h6 class="modal-title"><span id="modalTitle">新建字典项</span></h6><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="dictId">
+<div class="mb-3"><label class="form-label">字典类型 <span class="text-danger">*</span></label><input class="form-control" id="dType" list="dictTypeList"><datalist id="dictTypeList">{% for t in dict_types %}<option value="{{ t }}">{% endfor %}</datalist></div>
+<div class="mb-3"><label class="form-label">标签 <span class="text-danger">*</span></label><input class="form-control" id="dLabel"></div>
+<div class="mb-3"><label class="form-label">值</label><input class="form-control" id="dValue"></div>
+<div class="mb-3"><label class="form-label">排序</label><input type="number" class="form-control" id="dSort" value="0"></div>
+<div class="mb-3"><label class="form-label">备注</label><input class="form-control" id="dRemark"></div>
+</div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-danger" onclick="saveDict()">保存</button></div></div></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let editMode='add';
+function filterByType(){let t=$('#fDictType').val();$('.dict-row').each(function(){$(this).toggle(!t||$(this).data('type')===t);});}
+function showModal(mode){editMode=mode;$('#modalTitle').text(mode==='add'?'新建字典项':'修改字典项');$('#dictId').val('');$('#dType').val('');$('#dLabel').val('');$('#dValue').val('');$('#dSort').val(0);$('#dRemark').val('');$('#dictModal').modal('show');}
+function editDict(d){editMode='edit';$('#modalTitle').text('修改字典项');$('#dictId').val(d.id);$('#dType').val(d.dict_type);$('#dLabel').val(d.dict_label);$('#dValue').val(d.dict_value);$('#dSort').val(d.sort_order);$('#dRemark').val(d.remark||'');$('#dictModal').modal('show');}
+function saveDict(){let data={dict_type:$('#dType').val(),dict_label:$('#dLabel').val(),dict_value:$('#dValue').val(),sort_order:parseInt($('#dSort').val())||0,remark:$('#dRemark').val()};if(!data.dict_type||!data.dict_label)return alert('请填写必要字段');let url=editMode==='add'?'/api/v1/datadicts':'/api/v1/datadicts/'+$('#dictId').val(),method=editMode==='add'?'POST':'PUT';$.ajax({url,method,contentType:'application/json',data:JSON.stringify(data),success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});}
+function deleteDict(id){if(!confirm('确定删除吗？'))return;$.ajax({url:'/api/v1/datadicts/'+id,method:'DELETE',success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'删除失败');}});}
+</script>
+{% endblock %}
