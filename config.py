@@ -8,7 +8,6 @@
 =============================================================================
 """
 import os
-import secrets
 
 # 项目根目录
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -16,16 +15,8 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     """基础配置"""
-    # Flask密钥
-    SECRET_KEY = secrets.token_hex(32)
-
-    # 数据库配置 (开发环境使用SQLite，生产环境使用MySQL)
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'DATABASE_URL',
-        f'sqlite:///{os.path.join(BASE_DIR, "fire_alarm.db")}'
-    )
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ECHO = False
+    # Flask密钥 (生产环境必须通过环境变量设置固定值)
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'flame-detection-dev-secret-key-2026')
 
     # 站点名称
     SITE_NAME = '视频AI智能识别及预警管理信息系统'
@@ -87,7 +78,6 @@ class Config:
 class DevelopmentConfig(Config):
     """开发环境配置"""
     DEBUG = True
-    SQLALCHEMY_ECHO = True
 
 
 class ProductionConfig(Config):
@@ -98,7 +88,6 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """测试环境配置"""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 
 
 # 配置字典

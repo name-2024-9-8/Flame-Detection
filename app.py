@@ -11,6 +11,7 @@ import os
 import time
 from datetime import datetime
 from flask import Flask, render_template, request, session, g
+from markupsafe import Markup
 from config import config_dict
 from routes import register_routes
 
@@ -46,6 +47,18 @@ def create_app(config_name=None):
 
     # 注册Jinja2自定义过滤器
     register_template_filters(app)
+
+    # 注册上下文处理器 — 注入全局模板变量 (所有蓝图通用)
+    @app.context_processor
+    def inject_globals():
+        from routes.auth import get_current_user
+        user = get_current_user()
+        return {
+            'current_user': user,
+            'site_name': '视频AI智能识别及预警管理信息系统',
+            'logo_text': 'AI火焰识别预警',
+            'current_year': datetime.now().year,
+        }
 
     # 注册健康检查接口（修复：移到create_app内部避免404）
     @app.route('/health')
@@ -120,29 +133,29 @@ def register_template_filters(app):
     @app.template_filter('status_badge')
     def status_badge(status):
         badges = {
-            1: '<span class="badge badge-success">启用</span>',
-            0: '<span class="badge badge-secondary">禁用</span>',
+            1: Markup('<span class="badge badge-success">启用</span>'),
+            0: Markup('<span class="badge badge-secondary">禁用</span>'),
         }
-        return badges.get(status, '<span class="badge badge-light">未知</span>')
+        return badges.get(status, Markup('<span class="badge badge-light">未知</span>'))
 
     @app.template_filter('event_type_badge')
     def event_type_badge(event_type):
         badges = {
-            1: '<span class="badge badge-danger">火焰报警</span>',
-            2: '<span class="badge badge-warning">烟雾报警</span>',
-            3: '<span class="badge badge-info">设备异常</span>',
+            1: Markup('<span class="badge badge-danger">火焰报警</span>'),
+            2: Markup('<span class="badge badge-warning">烟雾报警</span>'),
+            3: Markup('<span class="badge badge-info">设备异常</span>'),
         }
-        return badges.get(event_type, '<span class="badge badge-light">未知</span>')
+        return badges.get(event_type, Markup('<span class="badge badge-light">未知</span>'))
 
     @app.template_filter('alarm_level_badge')
     def alarm_level_badge(level):
         badges = {
-            1: '<span class="badge badge-danger">紧急</span>',
-            2: '<span class="badge badge-warning">重要</span>',
-            3: '<span class="badge badge-info">一般</span>',
-            4: '<span class="badge badge-light">提示</span>',
+            1: Markup('<span class="badge badge-danger">紧急</span>'),
+            2: Markup('<span class="badge badge-warning">重要</span>'),
+            3: Markup('<span class="badge badge-info">一般</span>'),
+            4: Markup('<span class="badge badge-light">提示</span>'),
         }
-        return badges.get(level, '<span class="badge badge-light">未知</span>')
+        return badges.get(level, Markup('<span class="badge badge-light">未知</span>'))
 
 
 # =========================================================================

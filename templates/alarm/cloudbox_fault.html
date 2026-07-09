@@ -19,6 +19,6 @@
 {% block extra_js %}
 <script>
 function repairFault(id){$('#repairFaultId').val(id);$('#repairDesc').val('');$('#repairModal').modal('show');}
-function confirmRepair(){let id=$('#repairFaultId').val(),desc=$('#repairDesc').val();$.ajax({url:'/api/v1/cloudbox-faults/'+id+'/repair',method:'PUT',contentType:'application/json',data:JSON.stringify({repair_description:desc}),success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});}
+function confirmRepair(){let id=$('#repairFaultId').val(),desc=$('#repairDesc').val();$.ajax({url:'/api/v1/cloudbox-faults/'+id+'/repair',method:'PUT',contentType:'application/json',data:JSON.stringify({remark:desc}),success(r){alert(r.msg);location.reload();},error(xhr){alert(xhr.responseJSON?.msg||'操作失败');}});}
 </script>
 {% endblock %}

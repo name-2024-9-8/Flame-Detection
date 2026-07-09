@@ -48,7 +48,8 @@
                             <i class="bi bi-speedometer2"></i> 管理仪表盘
                         </a>
                     </li>
-                    <!-- 系统设置下拉 -->
+                    {% if current_user.user_type == 1 %}
+                    <!-- 系统设置下拉 (仅管理员) -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button"
                            data-bs-toggle="dropdown" aria-expanded="false">
@@ -67,7 +68,7 @@
                                 <i class="bi bi-journal-text"></i> 数据字典</a></li>
                         </ul>
                     </li>
-                    <!-- 设备管理下拉 -->
+                    <!-- 设备管理下拉 (仅管理员) -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button"
                            data-bs-toggle="dropdown" aria-expanded="false">
@@ -80,6 +81,7 @@
                                 <i class="bi bi-camera-video"></i> 摄像头管理</a></li>
                         </ul>
                     </li>
+                    {% endif %}
                     <!-- 报警事件下拉 -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button"
@@ -91,13 +93,16 @@
                                 <i class="bi bi-exclamation-triangle"></i> 报警事件</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.alarm_review') }}">
                                 <i class="bi bi-check-circle"></i> 事件审核</a></li>
+                            {% if current_user.user_type == 1 %}
                             <li><a class="dropdown-item" href="{{ url_for('main.camera_fault') }}">
                                 <i class="bi bi-camera-video-off"></i> 摄像头故障</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.cloudbox_fault') }}">
                                 <i class="bi bi-box-arrow-down"></i> AI云盒故障</a></li>
+                            {% endif %}
                         </ul>
                     </li>
-                    <!-- 日志管理下拉 -->
+                    {% if current_user.user_type == 1 %}
+                    <!-- 日志管理下拉 (仅管理员) -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button"
                            data-bs-toggle="dropdown" aria-expanded="false">
@@ -110,6 +115,7 @@
                                 <i class="bi bi-pencil-square"></i> 操作日志</a></li>
                         </ul>
                     </li>
+                    {% endif %}
                 </ul>
 
                 <!-- 右侧用户区域 -->

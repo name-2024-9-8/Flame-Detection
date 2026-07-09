@@ -1,0 +1,9 @@
+path: /workspace/pythonProject/data/dfire
+train: train/images
+val: val/images
+test: test/images
+
+nc: 2
+names:
+  0: fire
+  1: smoke

@@ -1,4 +1,3 @@
-# -*-coding: Utf-8 -*-
 # @File : main.py
 # Author: 郭
 # Software: PyCharm
@@ -112,21 +111,18 @@ def cmd_video_test():
 
 
 def cmd_edge_video():
-    import sys
     from edge.video_detect import main
     sys.argv = [sys.argv[0]] + sys.argv[2:]
     main()
 
 
 def cmd_flame_alarm():
-    import sys
     from edge.flame_alarm import main
     sys.argv = [sys.argv[0]] + sys.argv[2:]
     main()
 
 
 def cmd_edge_run():
-    import sys
     from edge.run import main
     # 转发命令行参数 (去掉 'edge-run' 本身)
     sys.argv = [sys.argv[0]] + sys.argv[2:]

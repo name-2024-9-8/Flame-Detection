@@ -1,350 +1,327 @@
 # 视频AI智能识别及预警管理信息系统 — 火焰识别
 
-> **FlameDetection_1.1** | 融合架构：Flask → PHP API → MySQL | 高德地图GIS数据大屏 | 地图弹窗增强
->
-> **整合版**: Web管理平台 (段林川/王永林) + YOLO11边缘检测 (郭俊奇) → 统一入口 `run.py`
+## FlameDetection 1.1 (combined_system 融合版)
+
+> 计算机视觉 · 边缘计算 · GIS 可视化 · 全链路闭环  
+> YOLO11 + Orange Pi 5 + Flask + PHP + MySQL  
+> 重庆理工大学 · 综合课程设计 III  
 
 ---
 
-## 人员信息
+## 👥 项目成员
 
-| 角色 | 姓名 | 工号 |
+| 角色 | 姓名 | 学号 | 负责模块 |
+|------|------|------|----------|
+| **组长（人员A）** | 郭俊奇 | 12303070411 | AI 边缘检测 — YOLO11 训练、ONNX/RKNN 转换、Orange Pi 5 NPU 部署 |
+| **组员（人员B）** | 王永林 | 12303070414 | PHP 后端 API + MySQL 数据库 — CodeIgniter 3 / php_alt_server.py |
+| **组员（人员C）** | 段林川 | 12309040309 | Flask Web 前端 — GIS 大屏、管理后台、API 桥接层 |
+
+📅 **创建时间**：2026 年 6 月 11 日  
+📅 **上传时间**：2026 年 7 月 9 日  
+📋 **当前分支**：`edge-deploy-full`  
+
+---
+
+## 🧠 项目简介
+
+**视频AI火焰识别预警系统**是一套完整的 **"边缘 AI 检测 + Web 可视化管理"** 全链路解决方案。系统通过 Orange Pi 5（RK3588S）边缘设备运行 YOLO11-nano 模型，对 RTSP 监控摄像头视频流进行实时火焰和烟雾检测，检测到火情后自动推送报警数据（含检测截图、取证视频、GPS 坐标）至 Web 管理平台。
+
+Web 管理平台基于 **Flask + Bootstrap 5 + 高德地图 JSAPI 2.0 + ECharts 5** 构建，提供 GIS 数据大屏、管理仪表盘、报警事件全流程管理、设备管理、用户权限管理和日志审计等完整的可视化功能。
+
+---
+
+## 🏗️ 系统架构
+
+```
+┌──────────────────────────────────────────────────┐
+│              客户端 (Browser / 大屏)                │
+│    Bootstrap 5 · ECharts 5 · 高德JSAPI 2.0         │
+├──────────────────────────────────────────────────┤
+│         Web 服务层 Flask :5000 (段林川)             │
+│   auth_bp · main_bp · api_bp · detect_bp           │
+│   api_bridge.py (JWT 线程安全桥接层)                │
+├──────────────────────────────────────────────────┤
+│      API 服务层 PHP/Python :8080 (王永林)          │
+│   JWT 认证 · CRUD API · 30+ REST 端点              │
+├──────────────────────────────────────────────────┤
+│      数据存储 MySQL :3306 + 文件系统                │
+│   15 张表 · 检测图片 · 取证视频 · 日志              │
+└──────────────────────────────────────────────────┘
+         ↑ HTTP POST (报警/心跳/故障)
+┌──────────────────────────────────────────────────┐
+│   边缘计算层 Orange Pi 5 RK3588S (郭俊奇)          │
+│   YOLO11-nano · ONNX/RKNN · 6 TOPS NPU            │
+│   RTSP 视频流 → 去雾+CLAHE → 推理 → 报警推送       │
+└──────────────────────────────────────────────────┘
+```
+
+### 技术栈
+
+| 层级 | 技术 | 版本 |
 |------|------|------|
-| 人员C · 前端开发与质量保障 | **段林川** | **12309040309** |
-| 人员B · 后端API桥接 | 王永林 | — |
-| 人员A · AI边缘检测 | 郭俊奇 | — |
+| Web 框架 | Flask | 3.1.0 |
+| 前端 UI | Bootstrap 5 | 5.3.x |
+| 图表库 | ECharts | 5.5.x |
+| 地图 API | 高德 JSAPI | 2.0 |
+| 模板引擎 | Jinja2 | 3.1.x |
+| API 桥接 | Python Requests + PyJWT | - |
+| 后端框架 | CodeIgniter 3 / php_alt_server.py | - |
+| 数据库 | MySQL | 8.0 |
+| AI 模型 | YOLO11-nano | ultralytics 8.3 |
+| 推理引擎 | ONNX Runtime / RKNN | - |
+| 边缘硬件 | Orange Pi 5 (RK3588S NPU 6TOPS) | - |
 
 ---
 
-## 版本信息
+## 📸 系统界面展示
 
-| 项目 | 内容 |
-|------|------|
-| **当前版本** | FlameDetection_1.1 |
-| **创建时间** | 2026-06-11 |
-| **上传时间** | 2026-07-06 |
-| **分支** | `abc/duanlinchuan/FlameDetection_1.1` |
+### GIS 数据大屏（主页）
 
----
+高德地图 3D 视图，实时标注摄像头位置和火情报警点位。点击火焰标记弹出信息窗口，展示**检测图片、取证视频、报警级别、置信度**等关键信息。
 
-## 架构概览
+![GIS数据大屏](报告模板/截图或图片/02_GIS数据大屏.png)
 
-```
-┌─────────────────────┐     RTSP视频流      ┌──────────────────────────┐
-│   摄像头 (海康/大华)  │ ─────────────────→  │  Orange Pi 5 (RK3588S)   │
-│                     │                     │  YOLO11-nano NPU 推理    │
-└─────────────────────┘                     └────────────┬─────────────┘
-                                                         │ HTTP POST
-                                                         ↓
-┌──────────────────────────────────────────────────────────────────────┐
-│  后端服务器 (B+C 融合)                                                 │
-│  ┌─────────────────┐   API桥接    ┌──────────────────────────┐        │
-│  │ Flask :5000      │ ←──────────→ │ PHP :8080 (CodeIgniter 3)│        │
-│  │ 前端页面 / 代理   │             │ RESTful API / 数据库      │        │
-│  └─────────────────┘             └──────────┬───────────────┘        │
-│                                             │                         │
-│                                     ┌───────▼────────┐               │
-│                                     │ MySQL           │               │
-│                                     │ flame_detection │               │
-│                                     │ (15张表)         │               │
-│                                     └────────────────┘               │
-└──────────────────────────────────────────────────────────────────────┘
-```
+### 管理仪表盘
 
----
+ECharts 图表展示 30 天报警趋势、区域分布、设备状态，提供系统运行一站式数据概览。
 
-## FlameDetection_1.0 版本内容
+![管理仪表盘](报告模板/截图或图片/03_管理仪表盘.png)
 
-### 1. GIS数据大屏 — 三层独立标记系统
+### 报警详情页 — 火焰检测图片与取证视频
 
-基于高德地图 AMap JSAPI v2.0，3D视角，重庆市中心默认视野（zoom 14）。8个摄像头分散在四个象限，均可见。
+每条报警事件包含完整的 **AI 火焰检测截图 + 3-5 秒取证视频 + GPS 定位信息**，支持从 GIS 大屏一键跳转查看。
 
-**三层标记互不重叠覆盖：**
+![报警详情页](报告模板/截图或图片/05_报警详情页.png)
 
-| 图层 | 图标 | 数量 | 说明 |
-|------|------|------|------|
-| 🔴 报警事件标记 | 红色🔥火焰 | **4** | 正常摄像头检测到火焰，变为此标记 |
-| 🔵 监控摄像头标记 | 蓝色📷摄像头 | **2** | 正常运行，无报警无故障 |
-| ⚠️ 故障摄像头标记 | 红色⚠警告 | **2** | 设备故障，无法检测火情 |
+### 报警事件管理
 
-**交互功能：**
-- 点击标记弹出详细信息窗口（设备信息、报警级别、故障描述等）
-- 右侧按钮独立切换各图层显示/隐藏
-- 徽章数字与地图实际标记数一一对应
-- 底部实时报警滚动条
+多条件筛选（事件类型/报警级别/处理状态）、分页列表、详情弹窗（含检测图片和视频播放）、审核处理全流程。
 
-### 2. 左侧统计面板
+![报警事件管理](报告模板/截图或图片/04_报警事件管理.png)
 
-| 统计项 | 说明 |
-|--------|------|
-| 监控摄像头（8） | 全部摄像头总数 |
-| AI智能云盒（2） | 全部AI云盒 |
-| 累计报警事件（4） | 按摄像头去重的报警事件数（非报警记录数） |
-| 今日识别率 | 已处理/总报警比率 |
+### 更多页面
 
-### 3. 故障摄像头智能处理
-
-- **报警过滤**：故障摄像头的报警事件不计入统计面板（因摄像头损坏无法检测火情）
-- **一键修复**：点击地图上的故障标记，弹出信息窗口显示"🔧 一键修复"按钮，点击即完成修复
-- **自动恢复**：修复后故障标记消失→变为蓝色摄像头标记，其报警事件自动可见并计入统计
-- 修复API链路：`地图JS → Flask PUT /api/v1/camera-faults/{id}/repair → PHP → MySQL DELETE`
-
-### 4. 报警事件按摄像头去重
-
-- 同一摄像头多条检测记录（如多次检测到火焰）归并为**1个报警标记**
-- 累计报警事件 = 有报警的不同摄像头数
-- 面板数字、按钮徽章、地图标记数三者完全一致
-
-### 5. 设备管理后台
-
-- 摄像头 CRUD（增删改查，含经纬度坐标）
-- AI智能云盒管理
-- 系统配置（高德地图Key/安全密钥、JWT密钥、报警阈值等）
-- 用户/角色/部门/数据字典管理
-- 报警事件审核（处理/驳回）
-- 访问日志/操作日志
-
-### 6. 边缘AI检测API
-
-| 方法 | 路径 | 认证 |
+| 页面 | 路径 | 功能 |
 |------|------|------|
-| POST | `/api/detect/alarm` | X-API-Key |
-| POST | `/api/detect/upload` | X-API-Key |
-| POST | `/api/device/heartbeat` | X-API-Key |
-| POST | `/api/device/error` | X-API-Key |
+| 登录页 | `/login` | JWT + Session 双认证 |
+| 报警审核 | `/alarm/review` | 待处理事件集中审核 |
+| 摄像头管理 | `/device/camera` | 摄像头 CRUD，RTSP 地址配置 |
+| 云盒管理 | `/device/cloudbox` | AI 分析盒 CRUD，心跳监控 |
+| 用户管理 | `/system/user` | 用户 CRUD，角色分配 |
+| 角色管理 | `/system/role` | 角色定义，权限配置 |
+| 部门管理 | `/system/department` | 部门树形结构 |
+| 系统配置 | `/system/config` | 检测阈值，视频参数 |
+| 数据字典 | `/system/datadict` | 枚举值动态维护 |
+| 访问日志 | `/log/access` | HTTP 请求全记录 |
+| 操作日志 | `/log/operation` | 业务操作留痕，变更前后对比 |
+
+<details>
+<summary>📸 点击展开更多界面截图</summary>
+
+### 登录页面
+![登录页面](报告模板/截图或图片/01_登录页面.png)
+
+### 报警审核页
+![报警审核页](报告模板/截图或图片/08_报警审核页.png)
+
+### 摄像头管理
+![摄像头管理](报告模板/截图或图片/06_摄像头管理.png)
+
+### 云盒设备管理
+![云盒设备管理](报告模板/截图或图片/07_云盒设备管理.png)
+
+### 系统配置
+![系统配置](报告模板/截图或图片/09_系统配置页.png)
+
+### 用户管理
+![用户管理](报告模板/截图或图片/10_用户管理页.png)
+
+### 故障管理
+![摄像头故障](报告模板/截图或图片/11_故障摄像头.png)
+![云盒故障](报告模板/截图或图片/17_故障云盒.png)
+
+### 日志审计
+![访问日志](报告模板/截图或图片/14_访问日志.png)
+![操作日志](报告模板/截图或图片/13_操作日志.png)
+
+</details>
 
 ---
 
-## FlameDetection_1.1 版本新增内容
+## 🔥 报警事件全流程闭环
 
-> **核心更新**：报警事件详情页 + 地图弹窗增强 + 取证视频接入
-
-### 1. 报警事件标记弹窗（简洁版）
-
-点击地图上的红色🔥火焰标记，弹出简洁信息窗口：
-
-| 信息项 | 说明 |
-|--------|------|
-| 事件编号 | 如 EVT-000005 |
-| 报警级别 | 紧急 / 重要 / 一般 / 提示 |
-| AI置信度 | 如 92.0% |
-| 检测时间 | 边缘AI检测到火情的时间 |
-| 位置描述 | 逆地址解析的位置信息 |
-| 经纬度 | GPS 坐标（6位小数） |
-| 处理状态 | 待处理 / 处理中 / 已处理 |
-| 关联摄像头 | 触发报警的摄像头名称 |
-
-底部操作栏：📍 地图定位 + **查看详情 →**（跳转到完整详情页）。
-
-### 2. 报警事件详情页 `/alarm/detail/<id>` ★ 核心新增
-
-点击弹窗中的"查看详情 →"按钮，跳转到完整的报警事件详情页面，包含五个区域：
-
-| 区域 | 内容 |
-|------|------|
-| **页头** | 火焰/烟雾报警事件详情标题 + 事件编号 + 处理状态徽章 |
-| **📷 摄像头属性** | 设备名称、编码、型号、类型、RTSP地址、安装位置、经纬度、监测物质、关联AI云盒 |
-| **🔥 烟源属性** | 事件类型、报警级别、AI置信度（含进度条）、检测时间、位置描述、事件描述 |
-| **🎬 取证视频** | HTML5 `<video>` 播放器，播放边缘设备（RK3399 Pro D / Orange Pi 5 NPU）抓拍的取证视频 |
-| **📋 处理流程** | 三步时间线：①报警触发 → ②处理中 → ③已处理，含各节点时间戳、处理人、审核人、处理备注 |
-| **📊 历史报警** | 该摄像头所有已处理的历史报警记录表格：时间、类型（火焰/烟雾）、置信度、处理状态 |
-
-→ 详情页路由：`routes/main.py` → `alarm_event_detail()` | 模板：`templates/alarm/detail.html`
-
-### 3. 摄像头标记弹窗增强（图21/22）
-
-点击蓝色📷摄像头标记，弹出增强信息窗口：
-
-| 区域 | 内容 |
-|------|------|
-| **摄像头属性** | 设备编码、型号、安装位置、经纬度、关联云盒 |
-| **当前报警信息** | （如有报警）烟源属性 + 取证视频 + 处理流程时间线 |
-| **历史报警记录** | 表格：时间、类型、置信度、状态 |
-
-### 4. 取证视频接入
-
-- 7个测试视频（VP*.mp4）通过 Flask 静态文件服务提供
-- 访问路径：`/static/videos/VP*.mp4`
-- 所有现有报警事件已关联对应取证视频
-- 视频来源：边缘AI设备在检测到火情时自动抓拍录制
-
-### 5. 数据库补充
-
-| 新增内容 | 说明 |
-|----------|------|
-| 取证视频URL | 为14条报警事件填充 `Picture` 和 `VideoUrl` 字段 |
-| 历史报警数据 | 新增4条历史报警记录（status=已处理），用于详情页历史列表 |
-| 单条报警API | PHP API新增 `GET /alarm/events/<id>` 接口 |
-| 种子脚本 | `sql/004_seed_videos.sql` |
-
----
-
-## 界面截图
-
-> 登录地址：`http://127.0.0.1:5000/`，账号：`admin / 123456`
-
-### 数据大屏全貌
-
-![GIS数据大屏全貌](docs/screenshots/01-gis-dashboard.png)
-
-> 左侧面板：监控摄像头(8)、AI云盒(2)、累计报警事件(4)、识别率。右侧按钮：报警标记(4)、摄像头标记(2)、故障标记(2)。地图上8个标记分散重庆市区，三层互不覆盖：4个🔥火焰（报警事件）、2个📷蓝色（正常监控）、2个⚠警告（故障摄像头）。
-
-### 故障摄像头标记 + 一键修复
-
-![故障修复信息窗口](docs/screenshots/02-fault-repair.png)
-
-> 点击地图上杨家坪/冉家坝的红色⚠故障标记，弹出信息窗口。显示设备名称、故障类型、故障编码、故障描述、发生时间、经纬度。底部绿色 **🔧 一键修复** 按钮直接修复故障，修复后页面自动刷新，报警恢复可见。
-
-### 管理后台仪表盘
-
-![管理仪表盘](docs/screenshots/03-dashboard.png)
-
-> ECharts 可视化统计面板：30天报警趋势折线图、报警级别分布饼图、区域报警统计柱状图（TOP 10）。顶部统计卡片：累计报警事件、监控摄像头、AI智能云盒、设备在线率。
-
-### FlameDetection_1.1 新增：报警标记弹窗（简洁版）
-
-![报警标记弹窗](docs/screenshots/04-alarm-popup.png)
-
-> 点击红色🔥报警标记，弹出**简洁信息窗口**：事件编号、报警级别、AI置信度、检测时间、位置描述、经纬度、处理状态、关联摄像头。底部按钮：📍 定位 + **查看详情 →**（跳转到完整详情页）。
-
-### FlameDetection_1.1 新增：报警事件详情页
-
-![报警事件详情页](docs/screenshots/07-alarm-detail.png)
-
-> 点击"查看详情 →"后跳转到的完整详情页 `/alarm/detail/<id>`。**摄像头属性**面板（左）：设备名称、编码、型号、RTSP地址、安装位置。**烟源属性**面板（左）：事件类型、报警级别、AI置信度进度条、检测时间。**取证视频**播放器（左）：HTML5视频播放。**处理流程**时间线（右）：报警触发→处理中→已处理，含处理人/审核人/备注。**历史报警记录**表格（右）：该摄像头所有已处理的历史报警。
-
-### FlameDetection_1.1 新增：摄像头当前报警信息
-
-![摄像头当前报警](docs/screenshots/05-camera-current-alarm.png)
-
-> 点击蓝色📷摄像头标记，弹出窗口显示**摄像头属性** + **当前报警信息**（含烟源属性和取证视频）。
-
-### FlameDetection_1.1 新增：摄像头历史报警记录
-
-![摄像头历史报警](docs/screenshots/06-camera-history.png)
-
-> 同一弹窗底部显示**历史报警记录表格**：时间、类型（火焰/烟雾）、置信度、处理状态。支持多条记录滚动查看。
-
----
-
-## 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 前端框架 | Flask + Jinja2 + Bootstrap 5 |
-| 地图引擎 | 高德地图 AMap JSAPI v2.0 |
-| 图表 | ECharts 5 |
-| 后端桥接 | Python requests + JWT |
-| 数据源 | PHP CodeIgniter 3 (端口8080) |
-| 数据库 | MySQL 8.0 (flame_detection, 15表) |
-| 边缘AI | ONNX Runtime + YOLO11-nano (Orange Pi 5 NPU) |
-
----
-
-## 快速启动
-
-### 方式一：Web管理平台
-```bash
-# 启动 Flask Web 应用（端口5000）
-python run.py web
-
-# 或直接
-python app.py
+```
+摄像头 RTSP 视频流
+    │
+    ▼
+YOLO11-nano ONNX/NPU 推理 (Orange Pi 5)
+    │
+    ▼
+火焰/烟雾检测触发 (Confidence > 0.85)
+    │
+    ▼
+边缘设备数据打包 (Base64 图片 + 视频 + GPS)
+    │
+    ▼
+HTTP POST → Flask /api/detect/alarm
+    │
+    ▼
+PHP API → MySQL T_DetectResult 表
+    │
+    ▼
+GIS 大屏实时展示 + 报警列表更新
+    │
+    ▼
+管理员审核处理 (确认/驳回/关闭) + 操作留痕
 ```
 
-访问 http://127.0.0.1:5000 | 管理员账号: admin / 123456
+---
 
-### 方式二：YOLO11火焰检测
+## 🗄️ 数据库设计
+
+系统含 **15 张 MySQL 数据表**，覆盖设备、用户、报警、故障、日志等全方位业务需求。
+
+![数据库ER图](报告模板/截图或图片/diagram_数据库ER图.png)
+
+核心表：`T_User`（用户）· `T_Role`（角色）· `T_UserRole`（用户角色）· `T_Camera`（摄像头）· `T_Device`（AI 分析盒）· `T_DetectResult`（检测结果）· `T_CameraError`· `T_DeviceError`· `T_OperateLog`· `T_AccessLog`· `T_Branch`（部门）· `T_Area`（区域）· `T_Site`（系统配置）· `T_Dictionary`（字典）· `T_Authority`（权限）
+
+---
+
+## 🚀 快速启动
+
+### 环境要求
+
+- Python 3.10+
+- MySQL 8.0+
+
+### 1. 克隆仓库
+
 ```bash
-# 视频文件火焰检测
-python run.py detection video-test
-
-# 边缘端检测管线
-python run.py detection edge-run
-
-# 火焰识别报警推送
-python run.py detection flame-alarm
-
-# 查看所有检测命令
-python run.py detection
+git clone git@github.com:duanlinchuan/combined_system.git
+cd combined_system
 ```
 
-### 方式三：完整后端（Python替代PHP）
-```bash
-python php_alt_server.py    # PHP API替代服务（8080）
-python seed_data.py         # 初始化数据库
-python add_cameras.py       # 添加摄像头
-python add_faulty_cameras.py # 添加故障摄像头
-```
+### 2. 安装依赖
 
-### 依赖安装
 ```bash
+python -m venv .venv
+source .venv/bin/activate      # Linux/Mac
+# .venv\Scripts\activate       # Windows
 pip install -r requirements.txt
 ```
 
----
+### 3. 初始化数据库
 
-## 项目结构
-
-```
-FlameDetection_1.1_Combined/
-├── run.py                  # ★ 统一启动入口
-├── app.py                  # Flask Web管理平台
-├── config.py               # Web系统配置（Flask/JWT/DB）
-├── routes/                 # Flask路由蓝图
-│   ├── main.py             # 页面路由（GIS大屏 / 仪表盘）
-│   ├── api.py              # RESTful API
-│   ├── auth.py             # 认证路由
-│   └── detect.py           # 边缘AI检测API代理
-├── templates/              # HTML模板
-│   ├── index.html          # GIS数据大屏（核心页面）
-│   ├── dashboard.html      # 管理仪表盘
-│   └── ...                 # 设备/报警/系统管理模板
-├── static/                 # 静态资源（CSS/JS/Lib）
-├── models.py               # 数据库模型
-├── api_bridge.py           # PHP API桥接层
-├── php_alt_server.py       # Python替代PHP服务器
-│
-├── detection/              # ★ YOLO11边缘检测模块 (人员A-郭俊奇)
-│   ├── main.py             # 检测命令CLI入口
-│   ├── config.py           # 检测参数配置（路径/阈值）
-│   ├── edge/               # 边缘端推理管线
-│   │   ├── run.py          # 主运行器
-│   │   ├── pipeline.py     # 检测流水线
-│   │   ├── inference_engine.py  # YOLO推理引擎
-│   │   ├── video_detect.py # 视频文件检测
-│   │   ├── flame_alarm.py  # 火焰报警推送
-│   │   ├── temporal_filter.py   # 时间序列滤波
-│   │   └── ...
-│   ├── localization/       # 相机标定与地理定位
-│   │   ├── camera_calibrator.py # 相机标定
-│   │   ├── geo_mapper.py   # 地理映射
-│   │   └── localization_pipeline.py # 定位流水线
-│   ├── data/               # 训练数据集
-│   ├── output/             # 模型权重与检测输出
-│   ├── test_video.py       # 视频文件检测入口
-│   ├── test_webcam.py      # 摄像头检测入口
-│   ├── train_yolo.py       # YOLO训练脚本
-│   └── evaluate_yolo.py    # 模型评估
-│
-├── sql/                    # SQL建表脚本
-├── requirements.txt        # Python依赖清单
-└── start-dev.bat           # Windows开发启动脚本
+```bash
+export MYSQL_PASSWORD=your_password    # 设置MySQL密码环境变量
+mysql -u root -p < sql/001_schema.sql  # 建表
+mysql -u root -p < sql/002_seed.sql    # 种子数据
 ```
 
----
+### 4. 启动后端 API 服务
 
-## 里程碑
+```bash
+python php_alt_server.py    # 端口 8080
+```
 
-| 阶段 | 内容 | 分支 |
+### 5. 启动 Web 前端
+
+```bash
+python run.py web            # 端口 5000
+```
+
+### 6. 访问系统
+
+浏览器打开 **http://127.0.0.1:5000**
+
+| 账号 | 密码 | 角色 |
 |------|------|------|
-| M1-M4 | 数据库设计、基础API、文档导出 | `backend/wangyonglin` |
-| M5 | 安全加固 + 前端页面 | `fusion/backend-frontend` |
-| M6 | B+C 前后端融合 (Flask↔PHP桥接) | `fusion/backend-frontend` |
-| M7 | A+B+C 三方融合 (边缘AI集成) | `fusion/abc-integration` |
-| **1.0** | **故障摄像头标记 + 报警过滤 + 一键修复 + 去重统计** | **`abc/duanlinchuan/FlameDetection_1.0`** |
-| **1.1** | **报警详情页 + 弹窗增强 + 取证视频 + 处理流程时间线** | **`abc/duanlinchuan/FlameDetection_1.1`** |
+| `admin` | `123456` | 超级管理员（全部权限） |
+| `chuli001` | `123456` | 普通操作员（查看+处理报警） |
 
 ---
 
-> 开发环境: Windows 11 · Python 3.13 · MySQL 8.0 · Flask 3.1 · CodeIgniter 3
+## 📁 项目结构
+
+```
+combined_system/
+├── app.py                  # Flask 应用工厂入口
+├── run.py                  # 统一启动入口 (web/detection)
+├── config.py               # 系统配置（三套环境）
+├── api_bridge.py           # ★ API 桥接层（JWT 线程安全）
+├── php_alt_server.py       # Python 版 PHP API 替代服务器
+├── mock_api_server.py      # Mock API 服务器（无 MySQL 演示用）
+├── requirements.txt        # Python 依赖
+├── yolo11n.pt              # YOLO11-nano 模型权重 (5.6MB)
+│
+├── routes/                 # Flask Blueprint 路由
+│   ├── auth.py             # 认证路由
+│   ├── main.py             # 页面路由
+│   ├── api.py              # RESTful API 路由
+│   └── detect.py           # 边缘设备通信路由
+│
+├── templates/              # Jinja2 模板
+│   ├── base.html           # 基模板
+│   ├── index.html          # GIS 数据大屏
+│   ├── login.html          # 登录页
+│   ├── alarm/              # 报警管理模板
+│   ├── device/             # 设备管理模板
+│   └── system/             # 系统管理模板
+│
+├── static/                 # 静态资源
+│   ├── lib/                # Bootstrap/ECharts/LayUI
+│   ├── uploads/alarms/     # 检测图片与视频存储
+│   └── videos/             # 测试视频
+│
+├── detection/              # AI 检测模块（郭俊奇）
+│   ├── main.py             # 检测命令入口
+│   └── edge/               # 边缘端推理管线
+│
+├── sql/                    # 数据库脚本（15张表）
+│
+├── 报告模板/               # 课程设计报告
+│   ├── 课程设计报告.doc     # Word 格式
+│   ├── 课程设计报告.pdf     # PDF 格式
+│   └── 截图或图片/          # 28 张截图与设计图
+│
+└── screenshots/            # 项目演示截图
+```
+
+---
+
+## 📊 性能指标
+
+| 指标 | 目标 | 实测 |
+|------|------|------|
+| 火焰识别率 | ≥ 90% | **95%+** |
+| 烟雾识别率 | ≥ 85% | **88%+** |
+| 误报率 | < 5% | **< 3%** (时序滤波后) |
+| 单帧推理速度 (NPU) | < 100ms | **≈18ms** |
+| 报警推送延迟 | ≤ 2秒 | **< 1.5秒** |
+| Web 首屏加载 | < 3秒 | **< 2秒** |
+
+---
+
+## 🔑 关键设计
+
+### API 桥接层 (api_bridge.py)
+
+- **线程安全**：`threading.Lock` 保护 JWT Token 读写
+- **统一代理**：`_get()` / `_post()` 封装所有 PHP API 调用
+- **数据映射**：自动转换 PHP PascalCase → 前端 camelCase
+- **融合模式**：`FUSION_MODE` 环境变量切换 PHP API / 本地降级
+
+### 边缘设备通信
+
+- **报警推送**：HTTP POST `/api/detect/alarm`（Base64 图片 + 视频 + GPS）
+- **心跳机制**：30 秒间隔，监控设备在线状态
+- **故障上报**：网络断开、图像质量差等故障自动检测上报
+
+---
+
+## 🙏 致谢
+
+- 指导老师：张红
+- YOLO11: [Ultralytics](https://github.com/ultralytics/ultralytics)
+- 高德地图 JSAPI: [高德开放平台](https://lbs.amap.com/)
+- Orange Pi 5: [Orange Pi](http://www.orangepi.org/)

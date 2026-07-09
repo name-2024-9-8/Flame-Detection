@@ -68,7 +68,7 @@ class APIBridge:
 
     @classmethod
     def _get(cls, path, params=None, auth=True):
-        """GET 请求"""
+        """GET 请求，token失效时自动重新登录"""
         headers = {}
         token = cls._get_token()
         if auth and token:
@@ -80,13 +80,20 @@ class APIBridge:
                 headers=headers,
                 timeout=10
             )
-            return resp.json()
+            data = resp.json()
+            if data.get('code') == 401 and auth:
+                token = cls._auto_login()
+                if token:
+                    headers['Authorization'] = 'Bearer ' + token
+                    resp = requests.get(PHP_API_BASE + '/' + path, params=params, headers=headers, timeout=10)
+                    data = resp.json()
+            return data
         except requests.RequestException as e:
             return {'code': 500, 'message': 'API连接失败: ' + str(e), 'data': None}
 
     @classmethod
     def _post(cls, path, data=None, auth=True):
-        """POST 请求"""
+        """POST 请求，token失效时自动重新登录"""
         headers = {}
         token = cls._get_token()
         if auth and token:
@@ -98,7 +105,14 @@ class APIBridge:
                 headers=headers,
                 timeout=10
             )
-            return resp.json()
+            result = resp.json()
+            if result.get('code') == 401 and auth:
+                token = cls._auto_login()
+                if token:
+                    headers['Authorization'] = 'Bearer ' + token
+                    resp = requests.post(PHP_API_BASE + '/' + path, data=data, headers=headers, timeout=10)
+                    result = resp.json()
+            return result
         except requests.RequestException as e:
             return {'code': 500, 'message': 'API连接失败: ' + str(e), 'data': None}
 
@@ -112,6 +126,30 @@ class APIBridge:
             'msg': php_result.get('message', 'error'),
             'data': php_result.get('data', None),
         }
+
+    @classmethod
+    def _auto_login(cls):
+        """token失效时尝试用缓存的用户凭证重新登录"""
+        # 优先使用线程本地缓存的登录凭证
+        creds = getattr(_local, 'login_credentials', None)
+        if not creds:
+            # 回退到默认管理员（仅在开发阶段）
+            creds = ('admin', '123456')
+        try:
+            resp = requests.post(
+                PHP_API_BASE + '/auth/login',
+                data={'account': creds[0], 'password': creds[1]},
+                timeout=10
+            )
+            data = resp.json()
+            if data.get('code') == 200:
+                token = data.get('data', {}).get('token', '')
+                if token:
+                    cls._set_token(token)
+                    return token
+        except Exception:
+            pass
+        return None
 
     # =========================================================================
     # 认证相关
@@ -325,7 +363,7 @@ class APIBridge:
     @classmethod
     def cloudbox_delete(cls, cb_id):
         """删除AI云盒"""
-        result = cls._get('devices/' + str(cb_id) + '/delete', params={'type': 'device'})
+        result = cls._post('devices/' + str(cb_id) + '/delete')
         return cls._to_c_format(result)
 
     # =========================================================================
@@ -407,7 +445,7 @@ class APIBridge:
     @classmethod
     def camera_delete(cls, cam_id):
         """删除摄像头"""
-        result = cls._get('devices/' + str(cam_id) + '/delete', params={'type': 'camera'})
+        result = cls._post('devices/' + str(cam_id) + '/delete')
         return cls._to_c_format(result)
 
     # =========================================================================
@@ -449,9 +487,8 @@ class APIBridge:
             # 无故障摄像头，使用原始统计
             total_alarms = (alarms_result.get('data') or {}).get('total', 0)
             pending_alarms = int((summary_result.get('data') or {}).get('pending_count', 0)) if summary_result.get('code') == 200 else 0
-            cam_stats = (cam_fault_result.get('data') or {}).get('stats', {}) if cam_fault_result.get('code') == 200 else {}
-            box_stats = (box_fault_result.get('data') or {}).get('stats', {}) if box_fault_result.get('code') == 200 else {}
-            today_alarms = cam_stats.get('today', 0) + box_stats.get('today', 0)
+            # 今日报警数：从 summary 获取 today_count
+            today_alarms = int((summary_result.get('data') or {}).get('today_count', 0)) if summary_result.get('code') == 200 else 0
 
         # 本月报警数（从summary获取当月数据）
         month_alarms = 0
@@ -507,7 +544,7 @@ class APIBridge:
             data = []
             for row in result.get('data', []):
                 data.append({
-                    'name': row.get('area_name', '未知区域'),
+                    'name': row.get('area_name') or '未知区域',
                     'value': row.get('total', 0),
                 })
             return {'code': 200, 'msg': 'success', 'data': data}
@@ -638,6 +675,11 @@ class APIBridge:
         is_admin = (account == 'admin' or
                     role_name == '超级管理员' or
                     real_name == '管理员')
+        is_delete = b_user.get('IsDelete')
+        if isinstance(is_delete, bytes):
+            is_delete = is_delete[0] if is_delete else 0
+        elif isinstance(is_delete, str) and len(is_delete) == 1:
+            is_delete = ord(is_delete[0])
         return {
             'id': b_user.get('Id') or b_user.get('id'),
             'username': account,
@@ -646,12 +688,13 @@ class APIBridge:
             'phone': b_user.get('Phone', b_user.get('phone', '')),
             'user_type': 1 if is_admin else 2,
             'user_type_name': '超级用户' if is_admin else '普通用户',
-            'status': 1 if not b_user.get('IsDelete') else 0,
+            'status': 0 if is_delete else 1,
             'department_id': b_user.get('BranchId', b_user.get('branch_id')),
             'department_name': b_user.get('BranchName', b_user.get('department_name', '')),
             'role_id': b_user.get('RoleId', b_user.get('role_id')),
             'role_name': role_name,
-            'login_count': 0,
+            'login_count': b_user.get('LoginCount', 0),
+            'last_login_at': b_user.get('LastLoginTime', ''),
         }
 
     @classmethod
@@ -679,7 +722,7 @@ class APIBridge:
             'event_type_name': {1: '火焰报警', 2: '烟雾报警', 3: '设备异常'}.get(event_type, '未知'),
             'alarm_level': alarm_level,
             'alarm_level_name': {1: '紧急', 2: '重要', 3: '一般', 4: '提示'}.get(alarm_level, '未知'),
-            'detection_confidence': float(b_item.get('Confidence', 0)) if b_item.get('Confidence') else 0.0,
+            'detection_confidence': float(b_item.get('Confidence')) if b_item.get('Confidence') is not None else 0.0,
             'fire_area_ratio': None,
             'longitude': b_item.get('Longitude'),
             'latitude': b_item.get('Latitude'),
@@ -797,7 +840,7 @@ class APIBridge:
     @classmethod
     def user_delete(cls, user_id):
         """删除用户"""
-        result = cls._get('users/' + str(user_id) + '/delete')
+        result = cls._post('users/' + str(user_id) + '/delete')
         return cls._to_c_format(result)
 
     # =========================================================================
@@ -850,7 +893,7 @@ class APIBridge:
     @classmethod
     def role_delete(cls, role_id):
         """删除角色"""
-        result = cls._get('roles/' + str(role_id) + '/delete')
+        result = cls._post('roles/' + str(role_id) + '/delete')
         return cls._to_c_format(result)
 
     # =========================================================================
@@ -905,7 +948,7 @@ class APIBridge:
     @classmethod
     def department_delete(cls, dept_id):
         """删除部门"""
-        result = cls._get('branches/' + str(dept_id) + '/delete')
+        result = cls._post('branches/' + str(dept_id) + '/delete')
         return cls._to_c_format(result)
 
     # =========================================================================
@@ -963,7 +1006,7 @@ class APIBridge:
     @classmethod
     def datadict_delete(cls, dd_id):
         """删除字典项"""
-        result = cls._get('dictionary/' + str(dd_id) + '/delete')
+        result = cls._post('dictionary/' + str(dd_id) + '/delete')
         return cls._to_c_format(result)
 
     # =========================================================================
@@ -984,23 +1027,8 @@ class APIBridge:
             'data': [
                 {'id': 1, 'config_key': 'site_name', 'config_value': Config.SITE_NAME,
                  'config_type': 'string', 'description': '站点名称'},
-                {'id': 2, 'config_key': 'fire_threshold',
-                 'config_value': str(t_site.get('thresh', 0.85)),
-                 'config_type': 'float', 'description': '火焰检测置信度阈值'},
-                {'id': 3, 'config_key': 'smoke_threshold',
-                 'config_value': str(float(t_site.get('thresh', 0.8)) * 0.95),
-                 'config_type': 'float', 'description': '烟雾检测置信度阈值'},
                 {'id': 4, 'config_key': 'logo_text', 'config_value': Config.SYSTEM_LOGO_TEXT,
                  'config_type': 'string', 'description': '系统Logo文字'},
-                {'id': 5, 'config_key': 'video_duration',
-                 'config_value': str(t_site.get('video_times', 5)),
-                 'config_type': 'int', 'description': '视频取证时长(秒)'},
-                {'id': 6, 'config_key': 'image_width',
-                 'config_value': str(t_site.get('width', 640)),
-                 'config_type': 'int', 'description': '取证图片宽度'},
-                {'id': 7, 'config_key': 'image_height',
-                 'config_value': str(t_site.get('height', 480)),
-                 'config_type': 'int', 'description': '取证图片高度'},
                 {'id': 8, 'config_key': 'heartbeat_interval',
                  'config_value': str(int(float(t_site.get('heartBeat', 0.5)) * 60)),
                  'config_type': 'int', 'description': '心跳间隔(秒)'},

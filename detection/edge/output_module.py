@@ -9,7 +9,6 @@
 from __future__ import annotations
 import time
 import json
-import base64
 import logging
 import threading
 from pathlib import Path
@@ -18,8 +17,9 @@ from typing import Optional
 from io import BytesIO
 
 import numpy as np
-import cv2
 import requests
+
+from edge.utils import encode_frame_base64, save_video_clip  # noqa: F401 — 向下兼容导出
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class ResultPublisher:
     - 支持重试和本地缓存
     """
 
-    def __init__(self, server_url: str = "http://127.0.0.1:8083",
+    def __init__(self, server_url: str = "http://127.0.0.1:8080",
                  api_key: str = "", cache_dir: str = "output/edge_cache"):
         self.server_url = server_url.rstrip('/')
         self.api_key = api_key
@@ -210,40 +210,6 @@ class ResultPublisher:
                 f.unlink()
                 sent += 1
         return sent
-
-
-def encode_frame_base64(frame: np.ndarray, quality: int = 80) -> str:
-    """将帧编码为base64 JPEG字符串"""
-    _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
-    return base64.b64encode(buffer).decode('utf-8')
-
-
-def save_video_clip(frames: list[np.ndarray], output_path: str,
-                     fps: int = 15, duration: float = 5.0) -> str:
-    """
-    保存报警视频片段 (3-5秒)
-    返回保存路径
-    """
-    if not frames:
-        return ""
-
-    h, w = frames[0].shape[:2]
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')
-    out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
-
-    num_frames = int(fps * duration)
-    for i, frame in enumerate(frames[:num_frames]):
-        out.write(frame)
-
-    # 如果帧不够，重复最后一帧
-    if len(frames) < num_frames:
-        last = frames[-1]
-        for _ in range(num_frames - len(frames)):
-            out.write(last)
-
-    out.release()
-    return output_path
-
 
 def extract_clip_frames(frame_buffer: list[np.ndarray],
                          trigger_idx: int = -1,

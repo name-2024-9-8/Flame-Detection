@@ -270,7 +270,7 @@ window.printPage = function() {
 // 控制台信息
 // =========================================================================
 
-console.log('%c🔥 视频AI智能识别及预警管理信息系统 %c v1.0.0',
+console.log('%c🔥 视频AI智能识别及预警管理信息系统 %c v1.1.0',
     'color: #e74c3c; font-size: 16px; font-weight: bold;',
     'color: #888; font-size: 12px;');
 console.log('%c基于深度学习的火焰智能检测平台',

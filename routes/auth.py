@@ -40,6 +40,9 @@ def _try_restore_session_from_jwt():
             session['real_name'] = user_data.get('real_name', '')
             session['email'] = user_data.get('email', '')
             session['phone'] = user_data.get('phone', '')
+            session['department_id'] = user_data.get('department_id')
+            session['role_id'] = user_data.get('role_id')
+            session['role_name'] = user_data.get('role_name', '')
             session['jwt_token'] = token
             return True
     except Exception:
@@ -97,6 +100,7 @@ def get_current_user():
             'phone': session.get('phone', ''),
             'department_id': session.get('department_id'),
             'role_id': session.get('role_id'),
+            'role_name': session.get('role_name', ''),
         }
     return None
 
@@ -133,7 +137,6 @@ def login():
         LOCAL_USERS = {
             "admin": {"password": "123456", "user_type": 1, "real_name": "管理员"},
             "chuli001": {"password": "123456", "user_type": 2, "real_name": "处理员"},
-            "zhangsan": {"password": "123456", "user_type": 3, "real_name": "张三"},
         }
         if username in LOCAL_USERS and LOCAL_USERS[username]["password"] == password:
             user_info = LOCAL_USERS[username]
@@ -167,6 +170,7 @@ def login():
     session['phone'] = user_data.get('phone', '')
     session['department_id'] = user_data.get('department_id')
     session['role_id'] = user_data.get('role_id')
+    session['role_name'] = user_data.get('role_name', '')
     session['jwt_token'] = jwt_token   # ★ 保存JWT供bridge使用
 
     if remember:

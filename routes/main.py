@@ -44,21 +44,6 @@ def _list_items(result):
 
 
 # =========================================================================
-# 上下文处理器 — 注入全局变量到模板
-# =========================================================================
-
-@main_bp.context_processor
-def inject_globals():
-    user = get_current_user()
-    return {
-        'current_user': user,
-        'site_name': '视频AI智能识别及预警管理信息系统',
-        'logo_text': 'AI火焰识别预警',
-        'current_year': datetime.now().year,
-    }
-
-
-# =========================================================================
 # 首页 — GIS数据大屏 ★ 核心页面
 # =========================================================================
 
@@ -85,8 +70,8 @@ def index():
     # 摄像头列表（地图标注）
     camera_list = _list_items(bridge.camera_list(per_page=500))
 
-    # 报警事件列表（全量，供地图弹窗和历史查询）
-    alarm_list = _list_items(bridge.alarm_list(per_page=1000))
+    # 报警事件列表（仅待处理，供地图标记）
+    alarm_list = _list_items(bridge.alarm_list(status='1', per_page=100))
 
     # 故障摄像头（数据大屏地图标注）
     cam_faults = _list_items(bridge.camera_fault_list(per_page=200))
@@ -168,6 +153,7 @@ def dashboard():
     total_cloud_boxes = overview.get('total_cloud_boxes', 0)
     total_alarms = overview.get('total_alarms', 0)
     pending_alarms = overview.get('pending_alarms', 0)
+    today_alarms = overview.get('today_alarms', 0)
 
     # 本月报警趋势 (30天，dashboard.html唯一引用的趋势图)
     month_alarms = _success_or_empty(bridge.statistics_by_date(days=30)) or []
@@ -197,6 +183,7 @@ def dashboard():
         total_cloud_boxes=total_cloud_boxes,
         total_alarms=total_alarms,
         pending_alarms=pending_alarms,
+        today_alarms=today_alarms,
         device_online_rate=device_online_rate,
         month_alarms_json=json.dumps(month_alarms, ensure_ascii=False),
         region_data_json=json.dumps(region_data, ensure_ascii=False),
@@ -276,6 +263,7 @@ def datadict():
 
 @main_bp.route('/device/cloudbox')
 @login_required
+@admin_required
 def cloudbox():
     """AI智能云盒管理页面 — 数据由AJAX加载"""
     return render_template('device/cloudbox.html', cloud_boxes=[])
@@ -283,6 +271,7 @@ def cloudbox():
 
 @main_bp.route('/device/camera')
 @login_required
+@admin_required
 def camera_management():
     """摄像头管理页面 — 数据由AJAX加载"""
     return render_template('device/camera.html', cameras=[], cloud_boxes=[])
@@ -349,6 +338,7 @@ def alarm_event_detail(event_id):
 
 @main_bp.route('/alarm/camera-fault')
 @login_required
+@admin_required
 def camera_fault():
     """摄像头故障页面"""
     bridge = _get_bridge()
@@ -360,6 +350,7 @@ def camera_fault():
 
 @main_bp.route('/alarm/cloudbox-fault')
 @login_required
+@admin_required
 def cloudbox_fault():
     """AI云盒故障页面"""
     bridge = _get_bridge()
@@ -375,6 +366,7 @@ def cloudbox_fault():
 
 @main_bp.route('/log/access')
 @login_required
+@admin_required
 def access_log():
     """访问日志页面"""
     return render_template('log/access.html', logs=[])
@@ -382,6 +374,7 @@ def access_log():
 
 @main_bp.route('/log/operation')
 @login_required
+@admin_required
 def operation_log():
     """操作日志页面"""
     return render_template('log/operation.html', logs=[])

@@ -52,6 +52,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from edge.inference_engine import YOLOInferenceEngine, DetectionBox
 from edge.preprocessing import ImagePreprocessor, PreprocessConfig
 from edge.temporal_filter import TemporalFilter, FilterConfig
+from edge.utils import encode_frame_base64
 
 # 配置日志
 logging.basicConfig(
@@ -250,12 +251,6 @@ def annotate_frame(frame: np.ndarray, detections: list[DetectionBox],
     return out
 
 
-def encode_frame_jpeg(frame: np.ndarray, quality: int = 80) -> str:
-    """编码帧为 base64 JPEG"""
-    _, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
-    return base64.b64encode(buf).decode("utf-8")
-
-
 # ============================================================
 # 火焰识别检测器
 # ============================================================
@@ -352,7 +347,7 @@ class FlameAlarmDetector:
         if fire_event is not None:
             # 触发报警!
             clip_path = self.clip_recorder.save_clip()
-            picture_b64 = encode_frame_jpeg(annotated)
+            picture_b64 = encode_frame_base64(annotated)
 
             urgency = "高" if best_conf > 0.8 else ("中" if best_conf > 0.5 else "低")
 
@@ -666,7 +661,7 @@ def main():
 
             # ★ 推送完整标注视频到服务器
             if args.push_video and not offline:
-                from edge.flame_alarm import encode_frame_jpeg
+                from edge.utils import encode_frame_base64
                 vid_path = result['output_video']
                 try:
                     with open(vid_path, 'rb') as vf:

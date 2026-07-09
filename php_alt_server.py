@@ -9,8 +9,6 @@ import io
 import os
 import json
 import math
-import hashlib
-import secrets
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -96,6 +94,26 @@ def query(sql, params=None, single=False):
         db.commit()
         lastid = cursor.lastrowid
         cursor.close()
+
+
+def transcode_to_h264(src_path, dst_path):
+    """将视频转码为浏览器可播的 H.264 (yuv420p)，失败返回 False"""
+    import subprocess
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        ffmpeg = get_ffmpeg_exe()
+    except Exception:
+        return False
+    try:
+        result = subprocess.run([
+            ffmpeg, '-y', '-i', src_path,
+            '-c:v', 'libx264', '-preset', 'ultrafast',
+            '-pix_fmt', 'yuv420p', '-an',
+            dst_path
+        ], capture_output=True, timeout=120)
+        return os.path.exists(dst_path) and os.path.getsize(dst_path) > 0
+    except Exception:
+        return False
         return lastid
 
 
@@ -215,6 +233,10 @@ def auth_login():
     if not valid:
         return error('账号或密码错误', 401)
 
+    # Track login count and last login time
+    query("UPDATE T_User SET LoginCount = COALESCE(LoginCount, 0) + 1, LastLoginTime = NOW() WHERE Id = %s",
+          (user['Id'],))
+
     token = generate_token(user['Id'], user['Account'])
 
     # Get role info
@@ -242,6 +264,8 @@ def auth_login():
             'BranchName': branch_data['Name'] if branch_data else '',
             'RoleId': role_data['RoleId'] if role_data else None,
             'RoleName': role_data['RoleName'] if role_data else '',
+            'LoginCount': user.get('LoginCount', 0),
+            'LastLoginTime': str(user.get('LastLoginTime', '')) if user.get('LastLoginTime') else '',
         }
     }
 
@@ -588,7 +612,7 @@ def device_update(dev_id):
     return success(None, '更新成功')
 
 
-@app.route('/index.php/api/devices/<int:dev_id>/delete', methods=['GET'])
+@app.route('/index.php/api/devices/<int:dev_id>/delete', methods=['POST'])
 @login_required
 def device_delete(dev_id):
     device_type = request.args.get('type', 'device')
@@ -609,22 +633,14 @@ def statistics():
         exclude_fault = request.args.get('exclude_fault_camera', '0') == '1'
 
         if exclude_fault:
-            # 排除故障摄像头的报警（故障摄像头无法检测火情）
-            # ★ 按摄像头去重：每个摄像头只算一个报警事件（与地图标记数一致）
             fault_filter = " AND CameraId NOT IN (SELECT CameraId FROM T_CameraError)"
-            total_alarms = query(
-                "SELECT COUNT(DISTINCT CameraId) as cnt FROM T_DetectResult WHERE 1=1" + fault_filter,
-                single=True)['cnt']
-            pending = query(
-                "SELECT COUNT(DISTINCT CameraId) as cnt FROM T_DetectResult WHERE Status = '1'" + fault_filter,
-                single=True)['cnt']
-            today_count = query(
-                "SELECT COUNT(DISTINCT CameraId) as cnt FROM T_DetectResult WHERE DATE(CreatTime) = CURDATE()" + fault_filter,
-                single=True)['cnt']
+            total_alarms = query("SELECT COUNT(*) as cnt FROM T_DetectResult WHERE 1=1" + fault_filter, single=True)['cnt']
+            pending = query("SELECT COUNT(*) as cnt FROM T_DetectResult WHERE Status = '1'" + fault_filter, single=True)['cnt']
+            today_count = query("SELECT COUNT(*) as cnt FROM T_DetectResult WHERE DATE(CreatTime) = CURDATE()" + fault_filter, single=True)['cnt']
         else:
-            total_alarms = query("SELECT COUNT(DISTINCT CameraId) as cnt FROM T_DetectResult", single=True)['cnt']
-            pending = query("SELECT COUNT(DISTINCT CameraId) as cnt FROM T_DetectResult WHERE Status = '1'", single=True)['cnt']
-            today_count = query("SELECT COUNT(DISTINCT CameraId) as cnt FROM T_DetectResult WHERE DATE(CreatTime) = CURDATE()", single=True)['cnt']
+            total_alarms = query("SELECT COUNT(*) as cnt FROM T_DetectResult", single=True)['cnt']
+            pending = query("SELECT COUNT(*) as cnt FROM T_DetectResult WHERE Status = '1'", single=True)['cnt']
+            today_count = query("SELECT COUNT(*) as cnt FROM T_DetectResult WHERE DATE(CreatTime) = CURDATE()", single=True)['cnt']
 
         return success({'total': total_alarms, 'pending_count': pending, 'today_count': today_count})
 
@@ -632,10 +648,10 @@ def statistics():
         start = request.args.get('start_time', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d 00:00:00'))
         end = request.args.get('end_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         rows = query("""
-            SELECT DATE(CreatTime) as time_label, COUNT(*) as total
+            SELECT DATE_FORMAT(CreatTime, '%%Y-%%m-%%d') as time_label, COUNT(*) as total
             FROM T_DetectResult
             WHERE CreatTime BETWEEN %s AND %s
-            GROUP BY DATE(CreatTime) ORDER BY time_label
+            GROUP BY DATE_FORMAT(CreatTime, '%%Y-%%m-%%d') ORDER BY time_label
         """, (start, end))
         return success(rows or [])
 
@@ -772,7 +788,7 @@ def user_update(user_id):
     return success(None, '更新成功')
 
 
-@app.route('/index.php/api/users/<int:user_id>/delete', methods=['GET'])
+@app.route('/index.php/api/users/<int:user_id>/delete', methods=['POST'])
 @login_required
 def user_delete(user_id):
     u = query("SELECT Account FROM T_User WHERE Id = %s", (user_id,), single=True)
@@ -839,7 +855,7 @@ def role_update(role_id):
     return success(None, '更新成功')
 
 
-@app.route('/index.php/api/roles/<int:role_id>/delete', methods=['GET'])
+@app.route('/index.php/api/roles/<int:role_id>/delete', methods=['POST'])
 @login_required
 def role_delete(role_id):
     query("UPDATE T_Role SET IsDelete = 1 WHERE Id = %s", (role_id,))
@@ -890,7 +906,7 @@ def branch_update(branch_id):
     return success(None, '更新成功')
 
 
-@app.route('/index.php/api/branches/<int:branch_id>/delete', methods=['GET'])
+@app.route('/index.php/api/branches/<int:branch_id>/delete', methods=['POST'])
 @login_required
 def branch_delete(branch_id):
     query("DELETE FROM T_Branch WHERE Id = %s", (branch_id,))
@@ -936,7 +952,7 @@ def dictionary_update(dict_id):
     return success(None, '更新成功')
 
 
-@app.route('/index.php/api/dictionary/<int:dict_id>/delete', methods=['GET'])
+@app.route('/index.php/api/dictionary/<int:dict_id>/delete', methods=['POST'])
 @login_required
 def dictionary_delete(dict_id):
     query("DELETE FROM T_Dictionary WHERE Id = %s", (dict_id,))
@@ -1039,21 +1055,143 @@ def device_fault_repair(fault_id):
 # =====================================================================
 @app.route('/index.php/api/detect/alarm', methods=['POST'])
 def detect_alarm():
+    import base64, uuid
+
     data = request.json or {}
-    query("""
+    event_type = data.get('event_type') or data.get('EventType') or 'fire'
+    device_id = data.get('device_id') or data.get('DeviceId') or 1
+    camera_id = data.get('camera_id') or data.get('CameraId') or 0
+    area_id = data.get('area_id') or data.get('AreaId') or 1
+    confidence = data.get('confidence') or data.get('Confidence') or 0
+    urgency = data.get('urgency_degree') or data.get('UrgencyDegree') or '一般'
+    description = data.get('description') or data.get('Description') or '边缘AI设备自动检测报警'
+    status = data.get('status') or data.get('Status') or '1'
+
+    # 尝试从数据库获取摄像头的位置信息
+    longitude = data.get('longitude') or data.get('Longitude') or ''
+    latitude = data.get('latitude') or data.get('Latitude') or ''
+    location = data.get('location') or data.get('Location') or ''
+    if camera_id and (not longitude or not latitude or not location):
+        cam = query("SELECT Longitude, Latitude, Name FROM T_Camera WHERE Id = %s",
+                    (camera_id,), single=True)
+        if cam:
+            if not longitude:
+                longitude = cam.get('Longitude', '')
+            if not latitude:
+                latitude = cam.get('Latitude', '')
+            if not location:
+                location = cam.get('Name', '')
+
+    # 保存检测图片
+    up_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'alarms')
+    os.makedirs(up_dir, exist_ok=True)
+
+    picture_path = ''
+    pic_b64 = data.get('picture_base64') or data.get('Picture')
+    if isinstance(pic_b64, str) and pic_b64.startswith('data:'):
+        pic_b64 = pic_b64.split(',', 1)[1] if ',' in pic_b64 else ''
+    if pic_b64:
+        try:
+            fname = 'alarm_%s.jpg' % uuid.uuid4().hex[:16]
+            with open(os.path.join(up_dir, fname), 'wb') as f:
+                f.write(base64.b64decode(pic_b64))
+            picture_path = '/static/uploads/alarms/' + fname
+        except Exception as e:
+            app.logger.warning('保存报警图片失败: %s' % e)
+
+    # 取证视频 (base64 或本地路径)
+    video_path = ''
+    vid_b64 = data.get('video_base64') or data.get('VideoBase64')
+    if isinstance(vid_b64, str) and vid_b64.startswith('data:'):
+        vid_b64 = vid_b64.split(',', 1)[1] if ',' in vid_b64 else ''
+    if vid_b64:
+        try:
+            fname = 'alarm_%s.mp4' % uuid.uuid4().hex[:16]
+            raw_path = os.path.join(up_dir, fname)
+            with open(raw_path, 'wb') as f:
+                f.write(base64.b64decode(vid_b64))
+            video_path = '/static/uploads/alarms/' + fname
+        except Exception as e:
+            app.logger.warning('保存报警视频失败: %s' % e)
+    else:
+        video_path = data.get('video_path') or data.get('VideoUrl') or ''
+        if video_path and not video_path.startswith('/static/'):
+            import shutil
+            src = video_path
+            if not os.path.isabs(src):
+                src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'detection', src)
+            if os.path.exists(src):
+                try:
+                    fname = 'alarm_%s.mp4' % uuid.uuid4().hex[:16]
+                    raw_path = os.path.join(up_dir, fname)
+                    shutil.copy2(src, raw_path)
+                    video_path = '/static/uploads/alarms/' + fname
+                except Exception as e:
+                    app.logger.warning('复制视频失败: %s' % e)
+
+    # 转码为 H.264 确保浏览器可播
+    if video_path:
+        raw_path = os.path.join(up_dir, os.path.basename(video_path))
+        h264_name = 'alarm_%s.mp4' % uuid.uuid4().hex[:16]
+        h264_path = os.path.join(up_dir, h264_name)
+        if transcode_to_h264(raw_path, h264_path):
+            os.remove(raw_path)
+            video_path = '/static/uploads/alarms/' + h264_name
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    new_id = query("""
         INSERT INTO T_DetectResult (EventType, Confidence, Longitude, Latitude, Location,
-            CameraId, DeviceId, Status, CreatTime, UrgencyDegree)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, '1', NOW(), %s)
-    """, (data.get('event_type', 'fire'), data.get('confidence', 0),
-          data.get('longitude'), data.get('latitude'), data.get('location', ''),
-          data.get('camera_id'), data.get('device_id'),
-          data.get('urgency_degree', '一般')))
-    return jsonify({'code': 201, 'message': '报警已记录', 'data': None})
+            Picture, VideoUrl, AreaId, CreatTime, CameraId, DeviceId, Status,
+            UrgencyDegree, Description)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (event_type, confidence, str(longitude), str(latitude), location,
+          picture_path, video_path, area_id, now, camera_id, device_id,
+          str(status), urgency, description))
+    return jsonify({'code': 201, 'message': '报警已记录', 'data': {'id': new_id}})
+
+
+@app.route('/index.php/api/detect/alarm/batch-video', methods=['POST'])
+def detect_alarm_batch_video():
+    """批量回填报警记录的视频URL（检测完成后调用）"""
+    data = request.json or {}
+    alarm_ids = data.get('alarm_ids', [])
+    video_url = data.get('video_url', '')
+    if not alarm_ids or not video_url:
+        return jsonify({'code': 400, 'message': '缺少 alarm_ids 或 video_url', 'data': None})
+    placeholders = ','.join(['%s'] * len(alarm_ids))
+    query(f"UPDATE T_DetectResult SET VideoUrl = %s WHERE Id IN ({placeholders})",
+          tuple([video_url] + list(alarm_ids)))
+    return jsonify({'code': 200, 'message': f'已更新 {len(alarm_ids)} 条记录', 'data': None})
 
 
 @app.route('/index.php/api/detect/upload', methods=['POST'])
 def detect_upload():
-    return jsonify({'code': 201, 'message': '上传成功', 'data': None})
+    """接收边缘端视频文件上传，保存并转码为 H.264"""
+    import shutil
+    up_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'alarms')
+    os.makedirs(up_dir, exist_ok=True)
+
+    saved_files = []
+    for key in request.files:
+        f = request.files[key]
+        raw_name = 'alarm_%s_raw.mp4' % uuid.uuid4().hex[:16]
+        raw_path = os.path.join(up_dir, raw_name)
+        f.save(raw_path)
+
+        final_name = 'alarm_%s.mp4' % uuid.uuid4().hex[:16]
+        final_path = os.path.join(up_dir, final_name)
+
+        if transcode_to_h264(raw_path, final_path):
+            os.remove(raw_path)
+        else:
+            shutil.move(raw_path, final_path)
+
+        saved_files.append('/static/uploads/alarms/' + final_name)
+
+    return jsonify({
+        'code': 201, 'message': '上传成功',
+        'data': {'files': saved_files}
+    })
 
 
 @app.route('/index.php/api/device/heartbeat', methods=['POST'])
@@ -1142,4 +1280,4 @@ if __name__ == '__main__':
     print("  端口: 8080")
     print("=" * 60)
 
-    app.run(host='127.0.0.1', port=8080, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)

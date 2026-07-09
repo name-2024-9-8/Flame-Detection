@@ -7,7 +7,6 @@ RESTful API 路由 — 融合模式（代理到王永林的PHP API）
 =============================================================================
 """
 from flask import Blueprint, request, jsonify, session, current_app
-import os
 from routes.auth import login_required, admin_required, get_current_user
 
 api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
@@ -279,6 +278,7 @@ def get_cloudboxes():
 
 @api_bp.route('/cloudboxes', methods=['POST'])
 @login_required
+@admin_required
 def create_cloudbox():
     data = request.get_json() or {}
     if not data.get('device_name') or not data.get('device_code'):
@@ -289,6 +289,7 @@ def create_cloudbox():
 
 @api_bp.route('/cloudboxes/<int:cb_id>', methods=['PUT'])
 @login_required
+@admin_required
 def update_cloudbox(cb_id):
     data = request.get_json() or {}
     bridge = _get_bridge()
@@ -330,6 +331,7 @@ def get_cameras():
 
 @api_bp.route('/cameras', methods=['POST'])
 @login_required
+@admin_required
 def create_camera():
     data = request.get_json() or {}
     if not data.get('device_name') or not data.get('device_code'):
@@ -340,6 +342,7 @@ def create_camera():
 
 @api_bp.route('/cameras/<int:camera_id>', methods=['PUT'])
 @login_required
+@admin_required
 def update_camera(camera_id):
     data = request.get_json() or {}
     bridge = _get_bridge()
@@ -411,7 +414,7 @@ def alarm_report():
 
     # 边缘API密钥校验：仅当生产环境设置了 EDGE_API_KEY 时才强制校验，
     # 开发环境(未设置 EDGE_API_KEY)放行，方便香橙派5Pro直接联调演示。
-    edge_key = os.environ.get('EDGE_API_KEY', '')
+    edge_key = current_app.config.get('EDGE_API_KEY', '')
     if edge_key:
         provided = request.headers.get('X-Edge-Api-Key', '')
         if provided != edge_key:

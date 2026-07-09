@@ -269,7 +269,7 @@
                         <div class="col-md-6">
                             <div class="prop-row"><span class="prop-label">检测时间</span><span class="prop-value">{{ alarm.detected_at or '-' }}</span></div>
                             <div class="prop-row"><span class="prop-label">发生火焰的位置</span><span class="prop-value">{{ alarm.location_description or '-' }}</span></div>
-                            <div class="prop-row"><span class="prop-label">火焰坐标(经纬度)</span><span class="prop-value">{{ '%.6f' | format(alarm.longitude|float) }}, {{ '%.6f' | format(alarm.latitude|float) }}</span></div>
+                            <div class="prop-row"><span class="prop-label">火焰坐标(经纬度)</span><span class="prop-value">{{ '%.6f' | format(alarm.longitude|float(0)) }}, {{ '%.6f' | format(alarm.latitude|float(0)) }}</span></div>
                             <div class="prop-row"><span class="prop-label">事件描述</span><span class="prop-value">{{ alarm.description or '边缘AI设备自动检测报警' }}</span></div>
                         </div>
                     </div>
