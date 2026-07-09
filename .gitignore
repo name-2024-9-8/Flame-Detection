@@ -70,9 +70,8 @@ web/uploads/
 .venv/
 venv/
 
-# ── 截图和文档图片 ──
+# ── 截图 ──
 screenshots/
-docs/
 
 # ── 课程设计报告模板（不上传）──
 报告模板/
