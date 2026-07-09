@@ -321,7 +321,6 @@ combined_system/
 
 ## 🙏 致谢
 
-- 指导老师：张红
 - YOLO11: [Ultralytics](https://github.com/ultralytics/ultralytics)
 - 高德地图 JSAPI: [高德开放平台](https://lbs.amap.com/)
 - Orange Pi 5: [Orange Pi](http://www.orangepi.org/)
